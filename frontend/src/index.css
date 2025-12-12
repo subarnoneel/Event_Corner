@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Remove scrollbar styling for scroll containers */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Utility for line clamping */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Custom focus styles */
+*:focus {
+  outline: none;
+}
+
+/* Gradient text utility */
+.bg-clip-text {
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+.text-transparent {
+  color: transparent;
+}

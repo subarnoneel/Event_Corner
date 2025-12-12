@@ -1,0 +1,21 @@
+{
+  "name": "event-corner",
+  "version": "1.0.0",
+  "description": "Event Corner - Full Stack Application",
+  "scripts": {
+    "dev": "node dev.js",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "start": "node start.js",
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "cd frontend && npm run build"
+  },
+  "keywords": [
+    "events",
+    "react",
+    "express",
+    "supabase"
+  ],
+  "author": "",
+  "license": "ISC"
+}
