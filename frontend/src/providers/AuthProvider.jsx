@@ -11,9 +11,9 @@ import {
   updateProfile,
 } from "firebase/auth";
 import React, { useEffect, useState } from "react";
-import { auth } from "../firebase.init.js";
 import AuthContext from "./AuthContext";
 import axios from "axios";
+import { auth } from "../../firebase.init.js";
 import { toast } from "react-hot-toast";
 import { API_ENDPOINTS } from "../config/api.js";
 
