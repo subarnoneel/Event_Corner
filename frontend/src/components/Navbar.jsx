@@ -15,9 +15,9 @@ const Navbar = () => {
     return location.pathname === path;
   };
 
- /* const navEnd = (
+  const navEnd = (
     <>
-      {user ? (
+    { /*user ? (
         <div className="navbar-end">
           
           
@@ -52,7 +52,7 @@ const Navbar = () => {
             </ul>
           </div>
         </div>
-      ) : (
+      ) : */(
         <div className="navbar-end gap-2">
           
           <Link to="/login" className="btn bg-red-500 hover:bg-red-600 text-white border-0">
@@ -75,8 +75,8 @@ const Navbar = () => {
         >
           Home
         </Link>
-      </li>
-      {user && (
+     </li>
+     {/* {user && (
         <li>
                   <Link 
           to="/Connect" 
@@ -102,14 +102,14 @@ const Navbar = () => {
         >
           Add Event
         </Link>
-        </li>
-      )}
+        </li> 
+      )}*/}
     </>
-  ); */
+  ); 
   
   return (
     <div className="bg-white shadow-lg rounded-md border-b border-gray-200 transition-colors duration-300">
-      <div className="navbar max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div className="navbar flex justify-between max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="navbar-start">
           <div className="dropdown">
             <div tabIndex={0} role="button" className="btn btn-ghost lg:hidden hover:bg-gray-200 transition-colors duration-200">
@@ -140,9 +140,9 @@ const Navbar = () => {
           </Link>
         </div>
         <div className="navbar-center hidden lg:flex">
-          <ul className="menu menu-horizontal px-1 gap-6"></ul>
+          <ul className="menu menu-horizontal px-1 gap-6">{list}</ul>
         </div>
-
+        {navEnd}
       </div>
     </div>
   );
