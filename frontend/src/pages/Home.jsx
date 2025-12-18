@@ -70,7 +70,7 @@ const Home = () => {
       name: "Nafiz Zia",
       role: "Participant",
       content:
-        "Event Lagbe helped me find amazing opportunities to showcase my skills and connect with industry professionals.",
+        "Amazing opportunities to showcase my skills and connect with industry professionals.",
       rating: 5,
     },
     {
