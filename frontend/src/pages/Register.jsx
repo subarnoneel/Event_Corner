@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useContext } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash, FaUser, FaBuilding, FaUserTie } from 'react-icons/fa';
 import Lottie from 'lottie-react';
 import loginAnimation from '../assets/ladylog.json';
+import SearchableInstitution from '../components/SearchableInstitution';
+import AuthContext from '../providers/AuthContext';
 
 const Register = () => {
+  const { register, loading } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [selectedRole, setSelectedRole] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -14,7 +18,9 @@ const Register = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    institution: ''
+    institution: '',
+    institution_id: null,
+    institution_name: ''
   });
 
   const roles = [
@@ -34,13 +40,59 @@ const Register = () => {
     setSelectedRole(role);
   };
 
-  const handleSubmit = (e) => {
+  const handleInstitutionSelect = (institutionData) => {
+    // Store both institution_id and institution name
+    setFormData({
+      ...formData,
+      institution_id: institutionData.id,
+      institution_name: institutionData.name
+    });
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate password match
     if (formData.password !== formData.confirmPassword) {
       alert('Passwords do not match!');
       return;
     }
-    console.log('Registration data:', { role: selectedRole, ...formData });
+    
+    // Validate institution selection for organizers
+    if (selectedRole === 'organizer' && !formData.institution_id) {
+      alert('Please select an institution!');
+      return;
+    }
+    
+    // Prepare registration data
+    const registrationData = {
+      role: selectedRole,
+      fullName: formData.fullName,
+      username: formData.username,
+      email: formData.email,
+      password: formData.password,
+    };
+    
+    // Add role-specific data
+    if (selectedRole === 'organizer') {
+      registrationData.institution_id = formData.institution_id;
+    } else if (selectedRole === 'participant') {
+      registrationData.institution = formData.institution;
+    }
+    
+    // Call the register function from AuthProvider
+    const result = await register(
+      formData.email,
+      formData.password,
+      registrationData
+    );
+    
+    // If registration successful, redirect to login
+    if (result.success) {
+      setTimeout(() => {
+        navigate('/login');
+      }, 1500); // Wait for toast to show
+    }
   };
 
   const getRoleButtonLabel = () => {
@@ -217,32 +269,25 @@ const Register = () => {
                 {/* Institution Field - Only for Organizer role */}
                 {selectedRole === 'organizer' && (
                   <div>
-                    <label htmlFor="institution" className="block text-sm font-medium text-gray-700 mb-2">
-                      Select Institution
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Search & Select Institution
                     </label>
-                    <select
-                      id="institution"
-                      name="institution"
-                      value={formData.institution}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all bg-white"
-                      required
-                    >
-                      <option value="">Choose institution</option>
-                      <option value="institution1">Institution 1</option>
-                      <option value="institution2">Institution 2</option>
-                      <option value="institution3">Institution 3</option>
-                      <option value="other">Other</option>
-                    </select>
+                    <SearchableInstitution
+                      value={formData.institution_name}
+                      selectedInstitutionId={formData.institution_id}
+                      onSelect={handleInstitutionSelect}
+                      placeholder="Start typing institution name..."
+                    />
                   </div>
                 )}
 
                 {/* Register Button */}
                 <button
                   type="submit"
-                  className={`w-full bg-gradient-to-r ${getRoleButtonColor()} text-white py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 mt-2`}
+                  disabled={loading}
+                  className={`w-full bg-gradient-to-r ${getRoleButtonColor()} text-white py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 mt-2 disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
-                  {getRoleButtonLabel()}
+                  {loading ? 'Registering...' : getRoleButtonLabel()}
                 </button>
               </form>
             )}

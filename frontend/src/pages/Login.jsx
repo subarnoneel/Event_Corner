@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useContext } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { FcGoogle } from 'react-icons/fc';
 import Lottie from 'lottie-react';
 import loginAnimation from '../assets/ladylog.json';
+import AuthContext from '../providers/AuthContext';
 
 const Login = () => {
+  const { logIn, signInWithGoogle, loading } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -19,15 +22,33 @@ const Login = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle login logic here
-    console.log('Login data:', formData);
+    
+    // Call login function from AuthProvider
+    const result = await logIn(formData.email, formData.password);
+    
+    // If login successful, redirect to home
+    if (result.success) {
+      setTimeout(() => {
+        navigate('/');
+      }, 1500); // Wait for toast to show
+    }
   };
 
-  const handleGoogleSignIn = () => {
-    // Handle Google sign-in logic here
-    console.log('Google sign-in');
+  const handleGoogleSignIn = async () => {
+    // Call Google sign-in function from AuthProvider
+    const result = await signInWithGoogle();
+    
+    if (result.success) {
+      // User logged in successfully
+      setTimeout(() => {
+        navigate('/');
+      }, 1500);
+    } else if (result.error === 'Please complete your profile registration') {
+      // New user - redirect to registration
+      navigate('/register');
+    }
   };
 
   return (
@@ -103,9 +124,10 @@ const Login = () => {
               {/* Sign In Button */}
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-cyan-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-cyan-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Sign In
+                {loading ? 'Signing In...' : 'Sign In'}
               </button>
             </form>
 
@@ -118,11 +140,13 @@ const Login = () => {
 
             {/* Google Sign In */}
             <button
+              type="button"
               onClick={handleGoogleSignIn}
-              className="w-full flex items-center justify-center gap-3 py-3 px-4 border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-all font-medium text-gray-700"
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-3 py-3 px-4 border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-all font-medium text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FcGoogle size={24} />
-              Sign in with Google
+              {loading ? 'Signing in...' : 'Sign in with Google'}
             </button>
 
             {/* Sign Up Link */}

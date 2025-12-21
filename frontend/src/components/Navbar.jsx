@@ -1,15 +1,47 @@
-// import React, { useContext } from "react";
+import React, { useContext, useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import logos from "../assets/EVENT.png";
-//import AuthContext from "../providers/AuthContext";
+import AuthContext from "../providers/AuthContext";
 
 const Navbar = () => {
-  //const { user, userRole, logOut } = useContext(AuthContext);
+  const { user, userRole, userData, logOut } = useContext(AuthContext);
   const location = useLocation();
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef(null);
   
-  // const handleLogOut = () => {
-  //   logOut();
-  // };
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+
+    if (showDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }
+  }, [showDropdown]);
+  
+  const handleLogOut = async () => {
+    await logOut();
+    setShowDropdown(false);
+  };
+
+  const getDashboardLink = () => {
+    if (!userRole) return "/";
+    // Map role names to dashboard routes
+    const dashboardMap = {
+      participant: "/participant-dashboard",
+      organizer: "/organizer-dashboard",
+      institution: "/institution-dashboard",
+      admin: "/admin-dashboard",
+      super_admin: "/super-admin-dashboard"
+    };
+    return dashboardMap[userRole] || "/";
+  };
 
   const isActive = (path) => {
     return location.pathname === path;
@@ -17,42 +49,50 @@ const Navbar = () => {
 
   const navEnd = (
     <>
-    { /*user ? (
-        <div className="navbar-end">
-          
-          
-          <div className="dropdown dropdown-end">
-            <div
-              tabIndex={0}
-              role="button"
-              className="btn btn-ghost btn-circle avatar hover:bg-gray-200 transition-colors duration-200"
-            >
-              <div className="w-10 rounded-full">
-                <img
-                  alt="Tailwind CSS Navbar component"
-                  src={user?.profilePictureUrl || "https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp"}
-                />
+      {user ? (
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={() => setShowDropdown(!showDropdown)}
+            className="btn btn-ghost btn-circle avatar hover:bg-gray-200 transition-colors duration-200 focus:outline-none"
+          >
+            <div className="w-10 rounded-full overflow-hidden ring-2 ring-gray-300 hover:ring-blue-500 transition-all">
+              <img
+                alt="Profile"
+                src={userData?.profile_picture_url || "https://res.cloudinary.com/dfvwazcdk/image/upload/v1753161431/generalProfilePicture_inxppe.png"}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </button>
+
+          {/* Dropdown Menu with Glassy Effect */}
+          {showDropdown && (
+            <div className="absolute right-0 mt-3 w-56 bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              {/* User Info */}
+              <div className="px-5 py-4 border-b border-white/20 bg-gradient-to-br from-blue-50/50 to-indigo-50/50">
+                <p className="font-bold text-gray-900 text-sm">{userData?.full_name || "User"}</p>
+                <p className="text-xs text-gray-600 capitalize mt-1 font-medium">{userRole || "User"}</p>
+              </div>
+
+              {/* Options */}
+              <div className="py-2">
+                <Link
+                  to={getDashboardLink()}
+                  onClick={() => setShowDropdown(false)}
+                  className="block px-5 py-3 text-gray-700 hover:bg-white/40 transition-all duration-200 font-medium text-sm hover:translate-x-1"
+                >
+                  📊 {userRole} Dashboard
+                </Link>
+                <button
+                  onClick={handleLogOut}
+                  className="w-full text-left px-5 py-3 text-red-600 hover:bg-red-500/10 transition-all duration-200 border-t border-white/20 font-medium text-sm hover:translate-x-1"
+                >
+                  🚪 Sign Out
+                </button>
               </div>
             </div>
-            <ul
-              tabIndex={0}
-              className="menu menu-sm dropdown-content bg-white rounded-box z-[1] mt-3 w-52 p-2 shadow-lg border border-gray-200"
-            >
-              <li>
-                <a className="justify-between text-gray-900 hover:bg-gray-100">
-                  {user?.name ? `${user.name} (${userRole || "User"})` : userRole || "User"}
-                </a>
-              </li>
-              <li>
-                <Link to={`/${userRole}Dashboard`} className="text-gray-900 hover:bg-gray-100">Profile</Link>
-              </li>
-              <li>
-                <a onClick={handleLogOut} className="text-gray-900 hover:bg-gray-100">Logout</a>
-              </li>
-            </ul>
-          </div>
+          )}
         </div>
-      ) : */(
+      ) : (
         <div className="flex gap-3 items-center">
           <Link to="/login" className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-colors duration-200 border-0">
             Login
