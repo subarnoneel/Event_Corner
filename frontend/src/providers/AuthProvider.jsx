@@ -31,7 +31,11 @@ const AuthProvider = ({ children }) => {
       setLoading(true);
 
       // Step 1: Create user in Firebase
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const firebaseUser = userCredential.user;
 
       // Step 2: Update Firebase profile with full name
@@ -62,7 +66,9 @@ const AuthProvider = ({ children }) => {
       }
     } catch (err) {
       console.error("Registration error:", err);
-      toast.error(err.response?.data?.error || err.message || "Registration failed");
+      toast.error(
+        err.response?.data?.error || err.message || "Registration failed"
+      );
       return { success: false, error: err };
     } finally {
       setLoading(false);
@@ -79,7 +85,11 @@ const AuthProvider = ({ children }) => {
       setLoading(true);
 
       // Step 1: Sign in with Firebase
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const firebaseUser = userCredential.user;
 
       // Step 2: Fetch user data from backend using Firebase UID
@@ -87,15 +97,19 @@ const AuthProvider = ({ children }) => {
         firebase_uid: firebaseUser.uid,
       });
 
+      console.log("//////////////////////////////////");
+      console.log(response);
+      console.log("//////////////////////////////////");
+
       if (response.data.success) {
         setUser(firebaseUser);
         setUserData(response.data);
-        
+
         // Extract primary role from roles array
         if (response.data.roles && response.data.roles.length > 0) {
           setUserRole(response.data.roles[0].role_name);
         }
-        
+
         toast.success("Login successful!");
         return { success: true, data: response.data };
       } else {
@@ -193,10 +207,10 @@ const AuthProvider = ({ children }) => {
       } else {
         // User exists in Firebase but not in our database
         setUser(firebaseUser);
-        return { 
-          success: false, 
+        return {
+          success: false,
           error: "User profile not found. Please complete registration.",
-          user: firebaseUser
+          user: firebaseUser,
         };
       }
     } catch (err) {
@@ -233,6 +247,10 @@ const AuthProvider = ({ children }) => {
             firebase_uid: currentUser.uid,
           });
 
+          console.log("//////////////////////////////////");
+          console.log(response);
+          console.log("//////////////////////////////////");
+
           if (response.data.success) {
             setUserData(response.data);
             if (response.data.roles && response.data.roles.length > 0) {
@@ -251,6 +269,10 @@ const AuthProvider = ({ children }) => {
         setUserData(null);
       } finally {
         setLoading(false);
+
+        console.log("//////////////////////////////////");
+        console.log(userData);
+        console.log("//////////////////////////////////");
       }
     });
 

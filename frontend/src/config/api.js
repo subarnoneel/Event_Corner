@@ -15,6 +15,28 @@ export const API_ENDPOINTS = {
     
     // Institution Search (for organizer registration)
     SEARCH_INSTITUTIONS: `${API_BASE_URL}/api/institutions/search`,
+    
+    // Superadmin - Profile Management
+    SUPERADMIN_PROFILE: (userId) => `${API_BASE_URL}/api/superadmin/profile/${userId}`,
+    SUPERADMIN_UPDATE_PROFILE: (userId) => `${API_BASE_URL}/api/superadmin/profile/${userId}`,
+    
+    // Superadmin - Institution Management
+    SUPERADMIN_INSTITUTIONS: `${API_BASE_URL}/api/superadmin/institutions`,
+    SUPERADMIN_VERIFY_INSTITUTION: (userId) => `${API_BASE_URL}/api/superadmin/institutions/${userId}/verify`,
+    SUPERADMIN_BULK_VERIFY_INSTITUTIONS: `${API_BASE_URL}/api/superadmin/institutions/bulk-verify`,
+    SUPERADMIN_INSTITUTION_STATS: `${API_BASE_URL}/api/superadmin/institutions/stats`,
+    
+    // Superadmin - User Management
+    SUPERADMIN_SEARCH_USERS: `${API_BASE_URL}/api/superadmin/users/search`,
+    SUPERADMIN_GET_USER: (userId) => `${API_BASE_URL}/api/superadmin/users/${userId}`,
+    SUPERADMIN_GET_USER_ROLES: (userId) => `${API_BASE_URL}/api/superadmin/users/${userId}/roles`,
+    SUPERADMIN_ASSIGN_ROLE: (userId) => `${API_BASE_URL}/api/superadmin/users/${userId}/assign-role`,
+    SUPERADMIN_REMOVE_ROLE: (userId, roleId) => `${API_BASE_URL}/api/superadmin/users/${userId}/roles/${roleId}`,
+    SUPERADMIN_MAKE_ADMIN: (userId) => `${API_BASE_URL}/api/superadmin/users/${userId}/make-admin`,
+    
+    // Superadmin - Role Management
+    SUPERADMIN_GET_ROLES: `${API_BASE_URL}/api/superadmin/roles`,
+    SUPERADMIN_BULK_ASSIGN_ROLE: `${API_BASE_URL}/api/superadmin/roles/bulk-assign`,
 };
 
 export default API_BASE_URL;

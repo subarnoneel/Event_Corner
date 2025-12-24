@@ -1,6 +1,7 @@
 // src/pages/Home.jsx
 import React, { useState, useEffect, useMemo, useContext } from "react";
 import { Link } from "react-router-dom";
+import AuthContext from "../providers/AuthContext";
 import {
   FiCalendar,
   FiUsers,
@@ -10,12 +11,14 @@ import {
   FiPlus,
   FiCheckCircle,
   FiTrendingUp,
+  FiShield,
 } from "react-icons/fi";
 import pic1 from "../assets/bd.JPG";
 import pic2 from "../assets/finals.jpg";
 import pic3 from "../assets/foreign.jpg";
 
 const Home = () => {
+  const { user } = useContext(AuthContext);
 
   const [currentSlide, setCurrentSlide] = useState(0);
   const carouselSlides = [
@@ -125,6 +128,15 @@ const Home = () => {
                     >
                       Find Your Event
                     </Link>
+                    {user && (
+                      <Link
+                        to="/superadmin"
+                        className="bg-blue-600 text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors duration-300 transform hover:scale-105 flex items-center justify-center gap-2"
+                      >
+                        <FiShield size={20} />
+                        Admin Dashboard
+                      </Link>
+                    )}
                   </div>
                 </div>
               </div>

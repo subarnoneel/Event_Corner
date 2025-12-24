@@ -32,13 +32,19 @@ const Navbar = () => {
 
   const getDashboardLink = () => {
     if (!userRole) return "/";
+    
+    // For super_admin, navigate to profile with UUID
+    if (userRole === 'super_admin' && userData?.id) {
+      return `/superadmin/profile/${userData.id}`;
+    }
+    
     // Map role names to dashboard routes
     const dashboardMap = {
       participant: "/participant-dashboard",
       organizer: "/organizer-dashboard",
       institution: "/institution-dashboard",
       admin: "/admin-dashboard",
-      super_admin: "/super-admin-dashboard"
+      super_admin: "/superadmin"
     };
     return dashboardMap[userRole] || "/";
   };
