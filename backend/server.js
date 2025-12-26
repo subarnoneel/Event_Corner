@@ -250,14 +250,14 @@ app.get('/api/institutions/search', async (req, res) => {
 
 
 // ============================================================================
-// SUPERADMIN ROUTES
+// USER PROFILE ROUTES (Common for all roles)
 // ============================================================================
 
 /**
- * GET /api/superadmin/profile/:userId
+ * GET /api/users/:userId/profile
  * Get user profile by user ID
  */
-app.get('/api/superadmin/profile/:userId', async (req, res) => {
+app.get('/api/users/:userId/profile', async (req, res) => {
   try {
     const { userId } = req.params;
 
@@ -284,10 +284,10 @@ app.get('/api/superadmin/profile/:userId', async (req, res) => {
 });
 
 /**
- * PUT /api/superadmin/profile/:userId
+ * PUT /api/users/:userId/profile
  * Update user profile
  */
-app.put('/api/superadmin/profile/:userId', async (req, res) => {
+app.put('/api/users/:userId/profile', async (req, res) => {
   try {
     const { userId } = req.params;
     const { full_name, username, profile_picture_url, banner_url, institution } = req.body;
@@ -318,6 +318,10 @@ app.put('/api/superadmin/profile/:userId', async (req, res) => {
     });
   }
 });
+
+// ============================================================================
+// SUPERADMIN ROUTES
+// ============================================================================
 
 /**
  * GET /api/superadmin/institutions
@@ -499,59 +503,47 @@ app.get('/api/superadmin/users/search', async (req, res) => {
   }
 });
 
+
+
 /**
- * GET /api/superadmin/users/:userId
- * Get user by ID
+ * PATCH /api/superadmin/users/:userId/toggle-active
+ * Activate or deactivate a user
  */
-app.get('/api/superadmin/users/:userId', async (req, res) => {
+app.patch('/api/superadmin/users/:userId/toggle-active', async (req, res) => {
   try {
     const { userId } = req.params;
+    const { is_active } = req.body;
 
-    const { data, error } = await supabase.rpc('get_user_by_id', {
-      p_user_id: userId
-    });
-
-    if (error) {
-      console.error('Error fetching user:', error);
+    if (typeof is_active !== 'boolean') {
       return res.status(400).json({
         success: false,
-        error: error.message || 'Failed to fetch user'
+        error: 'is_active must be a boolean value'
       });
     }
 
-    res.json(data);
-  } catch (err) {
-    console.error('Unexpected error fetching user:', err);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
-    });
-  }
-});
-
-/**
- * GET /api/superadmin/users/:userId/roles
- * Get user's assigned roles
- */
-app.get('/api/superadmin/users/:userId/roles', async (req, res) => {
-  try {
-    const { userId } = req.params;
-
-    const { data, error } = await supabase.rpc('get_user_roles', {
-      p_user_id: userId
-    });
+    // Update user active status directly
+    const { data, error } = await supabase
+      .from('users')
+      .update({ is_active, updated_at: new Date().toISOString() })
+      .eq('id', userId)
+      .select()
+      .single();
 
     if (error) {
-      console.error('Error fetching user roles:', error);
+      console.error('Error toggling user active status:', error);
       return res.status(400).json({
         success: false,
-        error: error.message || 'Failed to fetch user roles'
+        error: error.message || 'Failed to update user status'
       });
     }
 
-    res.json(data);
+    res.json({
+      success: true,
+      message: `User ${is_active ? 'activated' : 'deactivated'} successfully`,
+      data
+    });
   } catch (err) {
-    console.error('Unexpected error fetching user roles:', err);
+    console.error('Unexpected error toggling user status:', err);
     res.status(500).json({
       success: false,
       error: 'Internal server error'
@@ -658,37 +650,7 @@ app.get('/api/superadmin/roles', async (req, res) => {
   }
 });
 
-/**
- * POST /api/superadmin/users/:userId/make-admin
- * Make a user an admin
- */
-app.post('/api/superadmin/users/:userId/make-admin', async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { assigned_by } = req.body;
 
-    const { data, error } = await supabase.rpc('make_user_admin', {
-      p_user_id: userId,
-      p_assigned_by: assigned_by || null
-    });
-
-    if (error) {
-      console.error('Error making user admin:', error);
-      return res.status(400).json({
-        success: false,
-        error: error.message || 'Failed to make user admin'
-      });
-    }
-
-    res.json(data);
-  } catch (err) {
-    console.error('Unexpected error making user admin:', err);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error'
-    });
-  }
-});
 
 /**
  * POST /api/superadmin/roles/bulk-assign
@@ -722,6 +684,99 @@ app.post('/api/superadmin/roles/bulk-assign', async (req, res) => {
     res.json(data);
   } catch (err) {
     console.error('Unexpected error bulk assigning roles:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+
+// ============================================================================
+// INSTITUTION ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /api/institution/:institutionId/organizers
+ * Get all organizers under a specific institution
+ * Query params: search, sort_by, sort_order, page, limit
+ */
+app.get('/api/institution/:institutionId/organizers', async (req, res) => {
+  try {
+    const { institutionId } = req.params;
+    const { 
+      search = '', 
+      sort_by = 'is_verified', 
+      sort_order = 'DESC', 
+      page = 1, 
+      limit = 50 
+    } = req.query;
+
+    const { data, error } = await supabase.rpc('get_organizers_by_institution', {
+      p_institution_id: institutionId,
+      p_search: search || null,
+      p_sort_by: sort_by,
+      p_sort_order: sort_order.toUpperCase(),
+      p_page: parseInt(page),
+      p_limit: parseInt(limit)
+    });
+
+    if (error) {
+      console.error('Supabase error fetching organizers:', error);
+      return res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to fetch organizers'
+      });
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error('Unexpected error fetching organizers:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+/**
+ * PATCH /api/institution/organizers/:organizerId/verify
+ * Verify or unverify an organizer
+ * Body: { is_verified: boolean, verified_by: uuid }
+ */
+app.patch('/api/institution/organizers/:organizerId/verify', async (req, res) => {
+  try {
+    const { organizerId } = req.params;
+    const { is_verified, verified_by } = req.body;
+
+    if (typeof is_verified !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        error: 'is_verified must be a boolean value'
+      });
+    }
+
+    const { data, error } = await supabase.rpc('verify_organizer', {
+      p_organizer_id: organizerId,
+      p_is_verified: is_verified,
+      p_verified_by: verified_by || null
+    });
+
+    if (error) {
+      console.error('Supabase error verifying organizer:', error);
+      return res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to verify organizer'
+      });
+    }
+
+    if (!data.success) {
+      return res.status(400).json(data);
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error('Unexpected error verifying organizer:', err);
     res.status(500).json({
       success: false,
       error: 'Internal server error'

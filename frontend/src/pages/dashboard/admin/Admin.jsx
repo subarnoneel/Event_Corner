@@ -10,7 +10,7 @@ import {
   FiX
 } from 'react-icons/fi';
 
-const Superadmin = () => {
+const Admin = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -24,24 +24,24 @@ const Superadmin = () => {
   const menuItems = [
     {
       id: 'profile',
-      path: `/superadmin/profile`,
+      path: `/admin/profile`,
       label: 'Profile Dashboard',
       icon: FiUser,
-      description: 'Manage your superadmin profile'
+      description: 'Manage your admin profile'
     },
     {
       id: 'institutions',
-      path: '/superadmin/institutions',
+      path: '/admin/institutions',
       label: 'Manage Institutions',
       icon: FiHome,
       description: 'Verify and manage institutions'
     },
     {
-      id: 'roles',
-      path: '/superadmin/roles',
+      id: 'users',
+      path: '/admin/users',
       label: 'User Management',
       icon: FiUserCheck,
-      description: 'Manage users, roles and permissions'
+      description: 'View and manage users'
     }
   ];
 
@@ -49,7 +49,7 @@ const Superadmin = () => {
     const currentPath = location.pathname;
     if (currentPath.includes('/profile')) return menuItems[0];
     if (currentPath.includes('/institutions')) return menuItems[1];
-    if (currentPath.includes('/roles')) return menuItems[2];
+    if (currentPath.includes('/users')) return menuItems[2];
     return menuItems[0]; // Default to profile
   };
 
@@ -72,8 +72,8 @@ const Superadmin = () => {
           <div className="flex items-center justify-between">
             {sidebarOpen && (
               <div>
-                <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">Super Admin Panel</h1>
-                <p className="text-gray-500 text-xs mt-1">System Management</p>
+                <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">Admin Panel</h1>
+                <p className="text-gray-500 text-xs mt-1">Management Dashboard</p>
               </div>
             )}
             <button
@@ -162,4 +162,4 @@ const Superadmin = () => {
   );
 };
 
-export default Superadmin;
+export default Admin;

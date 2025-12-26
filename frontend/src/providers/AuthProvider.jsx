@@ -257,6 +257,13 @@ const AuthProvider = ({ children }) => {
               setUserRole(response.data.roles[0].role_name);
             }
           }
+          else{
+            // If backend does not recognize the user, log them out from Firebase
+            await signOut(auth);
+            setUser(null);
+            setUserRole(null);
+            setUserData(null);
+          }
         } else {
           setUser(null);
           setUserRole(null);
@@ -264,6 +271,8 @@ const AuthProvider = ({ children }) => {
         }
       } catch (err) {
         console.error("Auth state change error:", err);
+        // Log out from Firebase if backend fails
+        await signOut(auth);
         setUser(null);
         setUserRole(null);
         setUserData(null);

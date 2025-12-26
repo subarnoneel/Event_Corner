@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import { FiEdit2, FiSave, FiX } from "react-icons/fi";
 import { API_ENDPOINTS } from "../../../config/api";
 
-const SuperadminProfile = () => {
+const InstitutionProfile = () => {
   const { user, userData } = useContext(AuthContext);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -79,7 +79,7 @@ const SuperadminProfile = () => {
       {/* Profile Header Card */}
       <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
         {/* Gradient Banner */}
-        <div className="h-32 bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600 relative">
+        <div className="h-32 bg-gradient-to-r from-blue-400 via-cyan-500 to-teal-600 relative">
           {profile.banner_url && (
             <img
               src={profile.banner_url}
@@ -104,7 +104,7 @@ const SuperadminProfile = () => {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center">
+                    <div className="w-full h-full bg-gradient-to-br from-blue-400 to-teal-500 flex items-center justify-center">
                       <span className="text-white text-2xl font-bold">
                         {(profile.full_name || user?.email || "U")
                           .charAt(0)
@@ -126,12 +126,14 @@ const SuperadminProfile = () => {
 
                 {/* Role Badges */}
                 <div className="flex gap-3">
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
-                    ⭐ Admin Role
-                  </span>
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                    🛡️ Super Admin Type
+                    🏢 Institution
                   </span>
+                  {profile.institution && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-teal-100 text-teal-800">
+                      {profile.institution}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -244,11 +246,11 @@ const SuperadminProfile = () => {
           </div>
 
           {/* Institution */}
-          {isEditing && (
-            <div>
-              <label className="block text-sm font-medium text-blue-600 mb-2 uppercase tracking-wide">
-                🏢 Institution
-              </label>
+          <div>
+            <label className="block text-sm font-medium text-blue-600 mb-2 uppercase tracking-wide">
+              🏢 Institution
+            </label>
+            {isEditing ? (
               <input
                 type="text"
                 name="institution"
@@ -257,26 +259,30 @@ const SuperadminProfile = () => {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
                 placeholder="Enter your institution"
               />
-            </div>
-          )}
+            ) : (
+              <p className="text-gray-900 text-lg font-medium">
+                {profile.institution || "Not set"}
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Admin Status Section */}
+      {/* Institution Status Section */}
       <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-            <span className="text-orange-600 text-lg">⭐</span>
+          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+            <span className="text-blue-600 text-lg">🏢</span>
           </div>
-          <h2 className="text-xl font-bold text-gray-900">Admin Status</h2>
+          <h2 className="text-xl font-bold text-gray-900">Institution Status</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg">
+          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-4 rounded-lg">
             <h3 className="font-semibold text-gray-900 mb-2">Access Level</h3>
-            <p className="text-blue-600 font-medium">Super Administrator</p>
+            <p className="text-blue-600 font-medium">Institution Account</p>
             <p className="text-sm text-gray-600 mt-1">
-              Full system access and control
+              Manage events and organizers
             </p>
           </div>
 
@@ -325,4 +331,4 @@ const SuperadminProfile = () => {
   );
 };
 
-export default SuperadminProfile;
+export default InstitutionProfile;

@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import { FiEdit2, FiSave, FiX } from "react-icons/fi";
 import { API_ENDPOINTS } from "../../../config/api";
 
-const SuperadminProfile = () => {
+const AdminProfile = () => {
   const { user, userData } = useContext(AuthContext);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -130,7 +130,7 @@ const SuperadminProfile = () => {
                     ⭐ Admin Role
                   </span>
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                    🛡️ Super Admin Type
+                    🛡️ Administrator
                   </span>
                 </div>
               </div>
@@ -274,9 +274,9 @@ const SuperadminProfile = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg">
             <h3 className="font-semibold text-gray-900 mb-2">Access Level</h3>
-            <p className="text-blue-600 font-medium">Super Administrator</p>
+            <p className="text-blue-600 font-medium">Administrator</p>
             <p className="text-sm text-gray-600 mt-1">
-              Full system access and control
+              Management access and control
             </p>
           </div>
 
@@ -325,4 +325,4 @@ const SuperadminProfile = () => {
   );
 };
 
-export default SuperadminProfile;
+export default AdminProfile;

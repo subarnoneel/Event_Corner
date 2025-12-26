@@ -1,5 +1,5 @@
 import React from "react";
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import Home from "../pages/Home";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
@@ -7,7 +7,15 @@ import Superadmin from "../pages/dashboard/superadmin/Superadmin";
 import SuperadminProfile from "../pages/dashboard/superadmin/SuperadminProfile";
 import InstitutionManagement from "../pages/dashboard/superadmin/InstitutionManagement";
 import RoleAssignment from "../pages/dashboard/superadmin/RoleAssignment";
+import Admin from "../pages/dashboard/admin/Admin";
+import AdminProfile from "../pages/dashboard/admin/AdminProfile";
+import AdminInstitutionManagement from "../pages/dashboard/admin/AdminInstitutionManagement";
+import AdminUserManagement from "../pages/dashboard/admin/AdminUserManagement";
+import Institution from "../pages/dashboard/institution/Institution";
+import InstitutionProfile from "../pages/dashboard/institution/InstitutionProfile";
+import ManageOrganizers from "../pages/dashboard/institution/ManageOrganizers";
 import MainLayout from "../components/MainLayout";
+import ProtectedRoute from "./PrivateRoutes";
 
 
 const PublicRoutes = createBrowserRouter([
@@ -29,8 +37,12 @@ const PublicRoutes = createBrowserRouter([
             },
             {
                 path: "/superadmin",
-                element: <Superadmin />,
+                element: <ProtectedRoute allowedRoles={['super_admin']}><Superadmin /></ProtectedRoute>,
                 children: [
+                    {
+                        index: true,
+                        element: <Navigate to="profile" replace />
+                    },
                     {
                         path: "profile",
                         element: <SuperadminProfile />
@@ -43,10 +55,46 @@ const PublicRoutes = createBrowserRouter([
                         path: "roles",
                         element: <RoleAssignment />
                     },
+                ]
+            },
+            {
+                path: "/admin",
+                element: <ProtectedRoute allowedRoles={['admin']}><Admin /></ProtectedRoute>,
+                children: [
                     {
-                        path: "roles/:userId",
-                        element: <RoleAssignment />
-                    }
+                        index: true,
+                        element: <Navigate to="profile" replace />
+                    },
+                    {
+                        path: "profile",
+                        element: <AdminProfile />
+                    },
+                    {
+                        path: "institutions",
+                        element: <AdminInstitutionManagement />
+                    },
+                    {
+                        path: "users",
+                        element: <AdminUserManagement />
+                    },
+                ]
+            },
+            {
+                path: "/institution",
+                element: <ProtectedRoute allowedRoles={['institution']}><Institution /></ProtectedRoute>,
+                children: [
+                    {
+                        index: true,
+                        element: <Navigate to="profile" replace />
+                    },
+                    {
+                        path: "profile",
+                        element: <InstitutionProfile />
+                    },
+                    {
+                        path: "organizers",
+                        element: <ManageOrganizers />
+                    },
                 ]
             },
             

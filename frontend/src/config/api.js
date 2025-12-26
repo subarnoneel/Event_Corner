@@ -16,9 +16,9 @@ export const API_ENDPOINTS = {
     // Institution Search (for organizer registration)
     SEARCH_INSTITUTIONS: `${API_BASE_URL}/api/institutions/search`,
     
-    // Superadmin - Profile Management
-    SUPERADMIN_PROFILE: (userId) => `${API_BASE_URL}/api/superadmin/profile/${userId}`,
-    SUPERADMIN_UPDATE_PROFILE: (userId) => `${API_BASE_URL}/api/superadmin/profile/${userId}`,
+    // User Profile Management (Common for all roles)
+    USER_PROFILE: (userId) => `${API_BASE_URL}/api/users/${userId}/profile`,
+    UPDATE_USER_PROFILE: (userId) => `${API_BASE_URL}/api/users/${userId}/profile`,
     
     // Superadmin - Institution Management
     SUPERADMIN_INSTITUTIONS: `${API_BASE_URL}/api/superadmin/institutions`,
@@ -28,15 +28,17 @@ export const API_ENDPOINTS = {
     
     // Superadmin - User Management
     SUPERADMIN_SEARCH_USERS: `${API_BASE_URL}/api/superadmin/users/search`,
-    SUPERADMIN_GET_USER: (userId) => `${API_BASE_URL}/api/superadmin/users/${userId}`,
-    SUPERADMIN_GET_USER_ROLES: (userId) => `${API_BASE_URL}/api/superadmin/users/${userId}/roles`,
+    SUPERADMIN_TOGGLE_USER_ACTIVE: (userId) => `${API_BASE_URL}/api/superadmin/users/${userId}/toggle-active`,
     SUPERADMIN_ASSIGN_ROLE: (userId) => `${API_BASE_URL}/api/superadmin/users/${userId}/assign-role`,
     SUPERADMIN_REMOVE_ROLE: (userId, roleId) => `${API_BASE_URL}/api/superadmin/users/${userId}/roles/${roleId}`,
-    SUPERADMIN_MAKE_ADMIN: (userId) => `${API_BASE_URL}/api/superadmin/users/${userId}/make-admin`,
     
-    // Superadmin - Role Management
+    // Superadmin - User & Role Management
     SUPERADMIN_GET_ROLES: `${API_BASE_URL}/api/superadmin/roles`,
     SUPERADMIN_BULK_ASSIGN_ROLE: `${API_BASE_URL}/api/superadmin/roles/bulk-assign`,
+    
+    // Institution - Organizer Management
+    INSTITUTION_GET_ORGANIZERS: (institutionId) => `${API_BASE_URL}/api/institution/${institutionId}/organizers`,
+    INSTITUTION_VERIFY_ORGANIZER: (organizerId) => `${API_BASE_URL}/api/institution/organizers/${organizerId}/verify`,
 };
 
 export default API_BASE_URL;

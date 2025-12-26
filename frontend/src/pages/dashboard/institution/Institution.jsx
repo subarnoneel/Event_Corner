@@ -3,16 +3,15 @@ import AuthContext from '../../../providers/AuthContext';
 import { useNavigate, Link, Outlet, useLocation } from 'react-router-dom';
 import {
   FiUser,
-  FiHome,
-  FiUserCheck,
+  FiUsers,
   FiLogOut,
   FiMenu,
   FiX
 } from 'react-icons/fi';
 
-const Superadmin = () => {
+const Institution = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { user, logout } = useContext(AuthContext);
+  const { user, userData, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -24,32 +23,24 @@ const Superadmin = () => {
   const menuItems = [
     {
       id: 'profile',
-      path: `/superadmin/profile`,
+      path: `/institution/profile`,
       label: 'Profile Dashboard',
       icon: FiUser,
-      description: 'Manage your superadmin profile'
+      description: 'Manage your institution profile'
     },
     {
-      id: 'institutions',
-      path: '/superadmin/institutions',
-      label: 'Manage Institutions',
-      icon: FiHome,
-      description: 'Verify and manage institutions'
-    },
-    {
-      id: 'roles',
-      path: '/superadmin/roles',
-      label: 'User Management',
-      icon: FiUserCheck,
-      description: 'Manage users, roles and permissions'
+      id: 'organizers',
+      path: '/institution/organizers',
+      label: 'Manage Organizers',
+      icon: FiUsers,
+      description: 'View and manage event organizers'
     }
   ];
 
   const getCurrentMenuItem = () => {
     const currentPath = location.pathname;
     if (currentPath.includes('/profile')) return menuItems[0];
-    if (currentPath.includes('/institutions')) return menuItems[1];
-    if (currentPath.includes('/roles')) return menuItems[2];
+    if (currentPath.includes('/organizers')) return menuItems[1];
     return menuItems[0]; // Default to profile
   };
 
@@ -65,15 +56,15 @@ const Superadmin = () => {
         }}
       >
         {/* Decorative element */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-red-400 to-red-600 opacity-5 rounded-full -mr-16 -mt-16" />
+        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400 to-blue-600 opacity-5 rounded-full -mr-16 -mt-16" />
         
         {/* Header */}
         <div className="p-6 border-b border-gray-200 relative z-10">
           <div className="flex items-center justify-between">
             {sidebarOpen && (
               <div>
-                <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">Super Admin Panel</h1>
-                <p className="text-gray-500 text-xs mt-1">System Management</p>
+                <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">Institution Panel</h1>
+                <p className="text-gray-500 text-xs mt-1">Institution Dashboard</p>
               </div>
             )}
             <button
@@ -97,7 +88,7 @@ const Superadmin = () => {
                 to={item.path}
                 className={`group relative w-full flex items-center gap-4 px-4 py-4 rounded-xl transition-all duration-200 ${
                   isActive
-                    ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg shadow-red-500/30 scale-105'
+                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 scale-105'
                     : 'text-gray-700 hover:bg-gray-100 hover:translate-x-1'
                 }`}
                 title={!sidebarOpen ? item.label : ''}
@@ -112,7 +103,7 @@ const Superadmin = () => {
                   </div>
                 )}
                 {isActive && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-red-300 rounded-r-full" />
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-300 rounded-r-full" />
                 )}
               </Link>
             );
@@ -125,11 +116,14 @@ const Superadmin = () => {
             <div className="mb-4 p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200">
               <p className="text-xs text-gray-500">Logged in as</p>
               <p className="font-semibold truncate mt-1 text-gray-900">{user.email}</p>
+              {userData?.institution && (
+                <p className="text-xs text-blue-600 mt-1 truncate">{userData.institution}</p>
+              )}
             </div>
           )}
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 rounded-xl transition-all duration-200 text-white font-medium shadow-lg hover:shadow-xl hover:scale-105"
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-xl transition-all duration-200 text-white font-medium shadow-lg hover:shadow-xl hover:scale-105"
           >
             <FiLogOut size={18} />
             {sidebarOpen && <span>Logout</span>}
@@ -162,4 +156,4 @@ const Superadmin = () => {
   );
 };
 
-export default Superadmin;
+export default Institution;

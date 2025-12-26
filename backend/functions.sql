@@ -613,8 +613,7 @@ BEGIN
                 WHERE ur.user_id = u.id AND r.is_active = TRUE
             ) as roles
         FROM users u
-        WHERE u.is_active = TRUE
-        AND (
+        WHERE (
             u.full_name ILIKE '%' || p_search_term || '%' OR
             u.email ILIKE '%' || p_search_term || '%' OR
             u.username ILIKE '%' || p_search_term || '%'
@@ -859,17 +858,18 @@ DECLARE
     v_roles JSON;
 BEGIN
     -- Get all active roles
-    SELECT json_agg(json_build_object(
-        'id', id,
-        'role_name', role_name,
-        'display_name', display_name,
-        'description', description,
-        'is_active', is_active,
-        'created_at', created_at
-    )) INTO v_roles
+    SELECT json_agg(
+        json_build_object(
+            'id', id,
+            'role_name', role_name,
+            'display_name', display_name,
+            'description', description,
+            'is_active', is_active,
+            'created_at', created_at
+        ) ORDER BY display_name ASC
+    ) INTO v_roles
     FROM roles
-    WHERE is_active = TRUE
-    ORDER BY display_name ASC;
+    WHERE is_active = TRUE;
     
     RETURN json_build_object(
         'success', TRUE,
@@ -1055,6 +1055,175 @@ WHEN OTHERS THEN
     RETURN json_build_object(
         'success', FALSE,
         'error', 'Update failed: ' || SQLERRM
+    );
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- ============================================================================
+-- FUNCTION: get_organizers_by_institution
+-- Purpose: Get all organizers under a specific institution with search, sort, and pagination
+-- Parameters:
+--   p_institution_id: Institution user ID
+--   p_search: Search term (name or email)
+--   p_sort_by: Field to sort by (verified, active, full_name, email, created_at)
+--   p_sort_order: ASC or DESC
+--   p_page: Page number (1-based)
+--   p_limit: Items per page
+-- Returns: JSON with organizers list and pagination info
+-- ============================================================================
+CREATE OR REPLACE FUNCTION get_organizers_by_institution(
+    p_institution_id UUID,
+    p_search TEXT DEFAULT NULL,
+    p_sort_by TEXT DEFAULT 'is_verified',
+    p_sort_order TEXT DEFAULT 'DESC',
+    p_page INTEGER DEFAULT 1,
+    p_limit INTEGER DEFAULT 50
+)
+RETURNS JSON AS $$
+DECLARE
+    v_organizers JSON;
+    v_total_count INTEGER;
+    v_offset INTEGER;
+    v_where_clause TEXT := '';
+    v_order_clause TEXT;
+BEGIN
+    -- Calculate offset
+    v_offset := (p_page - 1) * p_limit;
+    
+    -- Validate sort order
+    IF p_sort_order NOT IN ('ASC', 'DESC') THEN
+        p_sort_order := 'DESC';
+    END IF;
+    
+    -- Validate sort field
+    IF p_sort_by NOT IN ('is_verified', 'is_active', 'full_name', 'email', 'created_at') THEN
+        p_sort_by := 'is_verified';
+    END IF;
+    
+    -- Build where clause for search
+    IF p_search IS NOT NULL AND LENGTH(trim(p_search)) > 0 THEN
+        v_where_clause := v_where_clause || ' AND (u.full_name ILIKE ''%' || p_search || '%'' OR u.email ILIKE ''%' || p_search || '%'')';
+    END IF;
+    
+    -- Build order clause
+    v_order_clause := ' ORDER BY u.' || p_sort_by || ' ' || p_sort_order || ', u.created_at DESC';
+    
+    -- Get total count
+    EXECUTE 'SELECT COUNT(*) FROM users u 
+             JOIN user_roles ur ON u.id = ur.user_id 
+             JOIN roles r ON ur.role_id = r.id 
+             WHERE r.role_name = ''organizer'' 
+             AND u.institution_id = ''' || p_institution_id || '''' || v_where_clause
+    INTO v_total_count;
+    
+    -- Get organizers with pagination
+    EXECUTE 'SELECT json_agg(row_to_json(t))
+             FROM (
+                 SELECT 
+                     u.id,
+                     u.firebase_uid,
+                     u.email,
+                     u.username,
+                     u.full_name,
+                     u.profile_picture_url,
+                     u.banner_url,
+                     u.institution_id,
+                     u.is_verified,
+                     u.is_active,
+                     u.created_at,
+                     u.updated_at
+                 FROM users u 
+                 JOIN user_roles ur ON u.id = ur.user_id 
+                 JOIN roles r ON ur.role_id = r.id 
+                 WHERE r.role_name = ''organizer'' 
+                 AND u.institution_id = ''' || p_institution_id || '''' || v_where_clause || v_order_clause || 
+                 ' LIMIT ' || p_limit || ' OFFSET ' || v_offset || 
+             ') t'
+    INTO v_organizers;
+    
+    -- Build result
+    RETURN json_build_object(
+        'success', TRUE,
+        'data', COALESCE(v_organizers, '[]'::json),
+        'pagination', json_build_object(
+            'current_page', p_page,
+            'per_page', p_limit,
+            'total_count', v_total_count,
+            'total_pages', CEIL(v_total_count::FLOAT / p_limit),
+            'has_next', (p_page * p_limit) < v_total_count,
+            'has_prev', p_page > 1
+        )
+    );
+
+EXCEPTION WHEN OTHERS THEN
+    RETURN json_build_object(
+        'success', FALSE,
+        'error', 'Failed to fetch organizers: ' || SQLERRM
+    );
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- ============================================================================
+-- FUNCTION: verify_organizer
+-- Purpose: Verify or unverify an organizer by their institution
+-- Parameters:
+--   p_organizer_id: User ID of the organizer
+--   p_is_verified: Verification status (TRUE/FALSE)
+--   p_verified_by: User ID of institution verifying
+-- Returns: JSON with success status
+-- ============================================================================
+CREATE OR REPLACE FUNCTION verify_organizer(
+    p_organizer_id UUID,
+    p_is_verified BOOLEAN,
+    p_verified_by UUID DEFAULT NULL
+)
+RETURNS JSON AS $$
+DECLARE
+    v_organizer_exists BOOLEAN;
+    v_institution_id UUID;
+BEGIN
+    -- Check if the user exists and has organizer role
+    SELECT u.institution_id INTO v_institution_id
+    FROM users u 
+    JOIN user_roles ur ON u.id = ur.user_id 
+    JOIN roles r ON ur.role_id = r.id 
+    WHERE u.id = p_organizer_id AND r.role_name = 'organizer';
+    
+    IF v_institution_id IS NULL THEN
+        RETURN json_build_object(
+            'success', FALSE,
+            'error', 'Organizer not found or not linked to any institution.'
+        );
+    END IF;
+    
+    -- Verify that the verified_by user is the institution
+    IF p_verified_by IS NOT NULL AND v_institution_id != p_verified_by THEN
+        RETURN json_build_object(
+            'success', FALSE,
+            'error', 'You can only verify organizers under your institution.'
+        );
+    END IF;
+    
+    -- Update verification status
+    UPDATE users SET
+        is_verified = p_is_verified,
+        updated_at = NOW()
+    WHERE id = p_organizer_id;
+    
+    RETURN json_build_object(
+        'success', TRUE,
+        'message', CASE WHEN p_is_verified THEN 'Organizer verified successfully.' ELSE 'Organizer unverified successfully.' END,
+        'organizer_id', p_organizer_id,
+        'is_verified', p_is_verified,
+        'verified_by', p_verified_by
+    );
+
+EXCEPTION WHEN OTHERS THEN
+    RETURN json_build_object(
+        'success', FALSE,
+        'error', 'Failed to update organizer verification: ' || SQLERRM
     );
 END;
 $$ LANGUAGE plpgsql;

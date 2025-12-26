@@ -30,23 +30,28 @@ const Navbar = () => {
     setShowDropdown(false);
   };
 
-  const getDashboardLink = () => {
-    if (!userRole) return "/";
-    
-    // For super_admin, navigate to profile with UUID
-    if (userRole === 'super_admin' && userData?.id) {
-      return `/superadmin/profile/${userData.id}`;
-    }
-    
+  const getDashboardLink = (roleName) => {
     // Map role names to dashboard routes
     const dashboardMap = {
       participant: "/participant-dashboard",
       organizer: "/organizer-dashboard",
-      institution: "/institution-dashboard",
-      admin: "/admin-dashboard",
-      super_admin: "/superadmin"
+      institution: "/institution",
+      event_organizer: "/organizer-dashboard",
+      super_admin: "/superadmin",
+      admin: "/admin"
     };
-    return dashboardMap[userRole] || "/";
+    return dashboardMap[roleName] || "/";
+  };
+
+  const getRoleBadgeColor = (roleName) => {
+    const colorMap = {
+      super_admin: "bg-purple-100 text-purple-800",
+      admin: "bg-red-100 text-red-800",
+      institution: "bg-blue-100 text-blue-800",
+      event_organizer: "bg-green-100 text-green-800",
+      participant: "bg-gray-100 text-gray-800"
+    };
+    return colorMap[roleName] || "bg-gray-100 text-gray-800";
   };
 
   const isActive = (path) => {
@@ -72,22 +77,48 @@ const Navbar = () => {
 
           {/* Dropdown Menu with Glassy Effect */}
           {showDropdown && (
-            <div className="absolute right-0 mt-3 w-56 bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="absolute right-0 mt-3 w-72 bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
               {/* User Info */}
               <div className="px-5 py-4 border-b border-white/20 bg-gradient-to-br from-blue-50/50 to-indigo-50/50">
                 <p className="font-bold text-gray-900 text-sm">{userData?.full_name || "User"}</p>
-                <p className="text-xs text-gray-600 capitalize mt-1 font-medium">{userRole || "User"}</p>
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {userData?.roles && userData.roles.length > 0 ? (
+                    userData.roles.map((role) => (
+                      <span
+                        key={role.role_id}
+                        className={`text-xs px-2 py-1 rounded-full font-medium ${getRoleBadgeColor(role.role_name)}`}
+                      >
+                        {role.display_name || role.role_name}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-gray-600 capitalize font-medium">{userRole || "User"}</span>
+                  )}
+                </div>
               </div>
 
-              {/* Options */}
+              {/* Dashboard Options */}
               <div className="py-2">
-                <Link
-                  to={getDashboardLink()}
-                  onClick={() => setShowDropdown(false)}
-                  className="block px-5 py-3 text-gray-700 hover:bg-white/40 transition-all duration-200 font-medium text-sm hover:translate-x-1"
-                >
-                  📊 {userRole} Dashboard
-                </Link>
+                {userData?.roles && userData.roles.length > 0 ? (
+                  userData.roles.map((role) => (
+                    <Link
+                      key={role.role_id}
+                      to={getDashboardLink(role.role_name)}
+                      onClick={() => setShowDropdown(false)}
+                      className="block px-5 py-3 text-gray-700 hover:bg-white/40 transition-all duration-200 font-medium text-sm hover:translate-x-1"
+                    >
+                      📊 {role.display_name || role.role_name} Dashboard
+                    </Link>
+                  ))
+                ) : (
+                  <Link
+                    to={getDashboardLink(userRole)}
+                    onClick={() => setShowDropdown(false)}
+                    className="block px-5 py-3 text-gray-700 hover:bg-white/40 transition-all duration-200 font-medium text-sm hover:translate-x-1"
+                  >
+                    📊 Dashboard
+                  </Link>
+                )}
                 <button
                   onClick={handleLogOut}
                   className="w-full text-left px-5 py-3 text-red-600 hover:bg-red-500/10 transition-all duration-200 border-t border-white/20 font-medium text-sm hover:translate-x-1"
@@ -162,7 +193,7 @@ const Navbar = () => {
         <div className="flex justify-between items-center h-20">
           {/* Logo */}
           <Link to="/" className="flex-shrink-0 hover:opacity-80 transition-opacity duration-200">
-            <img src={logos} alt="Event Lagbe" className="h-16 w-auto" />
+            <img src={logos} alt="Event Lagbe" className="h-12 w-auto" />
           </Link>
 
           {/* Desktop Navigation */}
