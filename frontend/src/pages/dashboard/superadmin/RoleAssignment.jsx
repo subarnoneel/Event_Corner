@@ -442,12 +442,13 @@ const AdminManagement = () => {
                   {filteredUsers.map((user) => {
                     const isLoading = loadingUsers.has(user.id);
                     const userRoles = user.roles || [];
+                    const truncatedId = user.id.length > 10 ? user.id.substring(0, 10) + '...' : user.id;
                     
                     return (
                       <tr key={user.id} className="hover:bg-gray-50 transition">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm font-medium text-blue-600 cursor-pointer hover:underline">
-                            {user.id}
+                          <span className="text-sm font-medium text-blue-600 cursor-pointer hover:underline" title={user.id}>
+                            {truncatedId}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">

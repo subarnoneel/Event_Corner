@@ -14,6 +14,10 @@ import AdminUserManagement from "../pages/dashboard/admin/AdminUserManagement";
 import Institution from "../pages/dashboard/institution/Institution";
 import InstitutionProfile from "../pages/dashboard/institution/InstitutionProfile";
 import ManageOrganizers from "../pages/dashboard/institution/ManageOrganizers";
+import Organizer from "../pages/dashboard/organizer/Organizer";
+import OrganizerProfile from "../pages/dashboard/organizer/OrganizerProfile";
+import Participant from "../pages/dashboard/participant/Participant";
+import ParticipantProfile from "../pages/dashboard/participant/ParticipantProfile";
 import MainLayout from "../components/MainLayout";
 import ProtectedRoute from "./PrivateRoutes";
 
@@ -94,6 +98,34 @@ const PublicRoutes = createBrowserRouter([
                     {
                         path: "organizers",
                         element: <ManageOrganizers />
+                    },
+                ]
+            },
+            {
+                path: "/organizer",
+                element: <ProtectedRoute allowedRoles={['organizer']}><Organizer /></ProtectedRoute>,
+                children: [
+                    {
+                        index: true,
+                        element: <Navigate to="profile" replace />
+                    },
+                    {
+                        path: "profile",
+                        element: <OrganizerProfile />
+                    },
+                ]
+            },
+            {
+                path: "/participant",
+                element: <ProtectedRoute allowedRoles={['participant']}><Participant /></ProtectedRoute>,
+                children: [
+                    {
+                        index: true,
+                        element: <Navigate to="profile" replace />
+                    },
+                    {
+                        path: "profile",
+                        element: <ParticipantProfile />
                     },
                 ]
             },

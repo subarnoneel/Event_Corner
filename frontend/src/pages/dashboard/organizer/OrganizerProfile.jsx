@@ -5,7 +5,7 @@ import { FiEdit2, FiSave, FiX } from "react-icons/fi";
 import { API_ENDPOINTS } from "../../../config/api";
 import ImageUploader from "../../../components/ImageUploader";
 
-const SuperadminProfile = () => {
+const OrganizerProfile = () => {
   const { user, userData } = useContext(AuthContext);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -69,7 +69,7 @@ const SuperadminProfile = () => {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="animate-spin">
-          <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full"></div>
+          <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full"></div>
         </div>
       </div>
     );
@@ -81,7 +81,7 @@ const SuperadminProfile = () => {
       <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
         {/* Banner Section */}
         {isEditing ? (
-          <div className="h-56 bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600">
+          <div className="h-56 bg-gradient-to-r from-purple-400 via-pink-500 to-purple-600">
             <ImageUploader
               onUploadSuccess={(url) =>
                 setProfile((prev) => ({ ...prev, banner_url: url }))
@@ -93,7 +93,7 @@ const SuperadminProfile = () => {
             />
           </div>
         ) : (
-          <div className="h-56 bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600 relative">
+          <div className="h-56 bg-gradient-to-r from-purple-400 via-pink-500 to-purple-600 relative">
             {profile.banner_url && (
               <img
                 src={profile.banner_url}
@@ -155,12 +155,14 @@ const SuperadminProfile = () => {
 
                 {/* Role Badges */}
                 <div className="flex gap-3">
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
-                    ⭐ Admin Role
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+                    🎯 Organizer
                   </span>
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                    🛡️ Super Admin Type
-                  </span>
+                  {profile.institution && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-pink-100 text-pink-800">
+                      {profile.institution}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -170,7 +172,7 @@ const SuperadminProfile = () => {
               {!isEditing ? (
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition font-medium shadow-md"
+                  className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition font-medium shadow-md"
                 >
                   <FiEdit2 size={18} />
                   Edit Profile
@@ -213,8 +215,8 @@ const SuperadminProfile = () => {
       {/* Basic Information Section */}
       <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-            <FiEdit2 className="text-blue-600" size={18} />
+          <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+            <FiEdit2 className="text-purple-600" size={18} />
           </div>
           <h2 className="text-xl font-bold text-gray-900">Basic Information</h2>
         </div>
@@ -222,7 +224,7 @@ const SuperadminProfile = () => {
         <div className="space-y-6">
           {/* Email */}
           <div>
-            <label className="block text-sm font-medium text-blue-600 mb-2 uppercase tracking-wide">
+            <label className="block text-sm font-medium text-purple-600 mb-2 uppercase tracking-wide">
               📧 Email
             </label>
             <p className="text-gray-900 text-lg font-medium">
@@ -232,7 +234,7 @@ const SuperadminProfile = () => {
 
           {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-blue-600 mb-2 uppercase tracking-wide">
+            <label className="block text-sm font-medium text-purple-600 mb-2 uppercase tracking-wide">
               👤 Name
             </label>
             {isEditing ? (
@@ -241,7 +243,7 @@ const SuperadminProfile = () => {
                 name="full_name"
                 value={profile.full_name}
                 onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-lg"
                 placeholder="Enter your full name"
               />
             ) : (
@@ -253,7 +255,7 @@ const SuperadminProfile = () => {
 
           {/* Username */}
           <div>
-            <label className="block text-sm font-medium text-blue-600 mb-2 uppercase tracking-wide">
+            <label className="block text-sm font-medium text-purple-600 mb-2 uppercase tracking-wide">
               🏷️ Username
             </label>
             {isEditing ? (
@@ -262,7 +264,7 @@ const SuperadminProfile = () => {
                 name="username"
                 value={profile.username}
                 onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-lg"
                 placeholder="Enter your username"
               />
             ) : (
@@ -273,39 +275,43 @@ const SuperadminProfile = () => {
           </div>
 
           {/* Institution */}
-          {isEditing && (
-            <div>
-              <label className="block text-sm font-medium text-blue-600 mb-2 uppercase tracking-wide">
-                🏢 Institution
-              </label>
+          <div>
+            <label className="block text-sm font-medium text-purple-600 mb-2 uppercase tracking-wide">
+              🏢 Institution
+            </label>
+            {isEditing ? (
               <input
                 type="text"
                 name="institution"
                 value={profile.institution}
                 onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-lg"
                 placeholder="Enter your institution"
               />
-            </div>
-          )}
+            ) : (
+              <p className="text-gray-900 text-lg font-medium">
+                {profile.institution || "Not set"}
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Admin Status Section */}
+      {/* Organizer Status Section */}
       <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-            <span className="text-orange-600 text-lg">⭐</span>
+          <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+            <span className="text-purple-600 text-lg">🎯</span>
           </div>
-          <h2 className="text-xl font-bold text-gray-900">Admin Status</h2>
+          <h2 className="text-xl font-bold text-gray-900">Organizer Status</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg">
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg">
             <h3 className="font-semibold text-gray-900 mb-2">Access Level</h3>
-            <p className="text-blue-600 font-medium">Super Administrator</p>
+            <p className="text-purple-600 font-medium">Organizer Account</p>
             <p className="text-sm text-gray-600 mt-1">
-              Full system access and control
+              Create and manage events
             </p>
           </div>
 
@@ -320,4 +326,4 @@ const SuperadminProfile = () => {
   );
 };
 
-export default SuperadminProfile;
+export default OrganizerProfile;

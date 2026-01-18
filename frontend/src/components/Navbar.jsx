@@ -33,10 +33,9 @@ const Navbar = () => {
   const getDashboardLink = (roleName) => {
     // Map role names to dashboard routes
     const dashboardMap = {
-      participant: "/participant-dashboard",
-      organizer: "/organizer-dashboard",
+      participant: "/participant",
+      organizer: "/organizer",
       institution: "/institution",
-      event_organizer: "/organizer-dashboard",
       super_admin: "/superadmin",
       admin: "/admin"
     };

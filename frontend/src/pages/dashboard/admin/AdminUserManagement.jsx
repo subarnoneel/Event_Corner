@@ -98,7 +98,7 @@ const AdminUserManagement = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-full mx-auto">
         {/* Search Section */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
           <div className="flex flex-col md:flex-row gap-4">
@@ -166,12 +166,13 @@ const AdminUserManagement = () => {
                   {filteredUsers.map((user) => {
                     const isLoading = loadingUsers.has(user.id);
                     const userRoles = user.roles || [];
+                    const truncatedId = user.id.length > 10 ? user.id.substring(0, 10) + '...' : user.id;
                     
                     return (
                       <tr key={user.id} className="hover:bg-gray-50 transition">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm font-medium text-blue-600">
-                            {user.id.slice(0, 8)}...
+                          <span className="text-sm font-medium text-blue-600" title={user.id}>
+                            {truncatedId}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">

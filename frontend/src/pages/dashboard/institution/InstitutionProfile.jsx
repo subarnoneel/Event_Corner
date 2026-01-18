@@ -3,6 +3,7 @@ import AuthContext from "../../../providers/AuthContext";
 import toast from "react-hot-toast";
 import { FiEdit2, FiSave, FiX } from "react-icons/fi";
 import { API_ENDPOINTS } from "../../../config/api";
+import ImageUploader from "../../../components/ImageUploader";
 
 const InstitutionProfile = () => {
   const { user, userData } = useContext(AuthContext);
@@ -78,16 +79,30 @@ const InstitutionProfile = () => {
     <div className="max-w-4xl">
       {/* Profile Header Card */}
       <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
-        {/* Gradient Banner */}
-        <div className="h-32 bg-gradient-to-r from-blue-400 via-cyan-500 to-teal-600 relative">
-          {profile.banner_url && (
-            <img
-              src={profile.banner_url}
-              alt="Banner"
-              className="w-full h-full object-cover"
+        {/* Banner Section */}
+        {isEditing ? (
+          <div className="h-56 bg-gradient-to-r from-blue-400 via-cyan-500 to-teal-600">
+            <ImageUploader
+              onUploadSuccess={(url) =>
+                setProfile((prev) => ({ ...prev, banner_url: url }))
+              }
+              currentImage={profile.banner_url}
+              folder="event-corner/banners"
+              type="banner"
+              label="Upload Banner Image"
             />
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="h-56 bg-gradient-to-r from-blue-400 via-cyan-500 to-teal-600 relative">
+            {profile.banner_url && (
+              <img
+                src={profile.banner_url}
+                alt="Banner"
+                className="w-full h-full object-cover"
+              />
+            )}
+          </div>
+        )}
 
         {/* Profile Info Section */}
         <div className="px-8 py-6">
@@ -95,24 +110,38 @@ const InstitutionProfile = () => {
             {/* Left: Profile Picture and Info */}
             <div className="flex items-center gap-6">
               {/* Profile Picture */}
-              <div className="relative -mt-12">
-                <div className="w-24 h-24 rounded-full border-4 border-white bg-gray-200 overflow-hidden shadow-lg">
-                  {profile.profile_picture_url ? (
-                    <img
-                      src={profile.profile_picture_url}
-                      alt="Profile"
-                      className="w-full h-full object-cover"
+              <div className="relative -mt-20">
+                {isEditing ? (
+                  <div className="w-32 h-32">
+                    <ImageUploader
+                      onUploadSuccess={(url) =>
+                        setProfile((prev) => ({ ...prev, profile_picture_url: url }))
+                      }
+                      currentImage={profile.profile_picture_url}
+                      folder="event-corner/profiles"
+                      type="profile"
+                      label="Upload"
                     />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-blue-400 to-teal-500 flex items-center justify-center">
-                      <span className="text-white text-2xl font-bold">
-                        {(profile.full_name || user?.email || "U")
-                          .charAt(0)
-                          .toUpperCase()}
-                      </span>
-                    </div>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <div className="w-32 h-32 rounded-full border-4 border-white bg-gray-200 overflow-hidden shadow-lg">
+                    {profile.profile_picture_url ? (
+                      <img
+                        src={profile.profile_picture_url}
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-blue-400 to-teal-500 flex items-center justify-center">
+                        <span className="text-white text-2xl font-bold">
+                          {(profile.full_name || user?.email || "U")
+                            .charAt(0)
+                            .toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Name and Username */}
@@ -292,40 +321,6 @@ const InstitutionProfile = () => {
             <p className="text-sm text-gray-600 mt-1">All privileges enabled</p>
           </div>
         </div>
-
-        {isEditing && (
-          <div className="mt-6 space-y-4">
-            {/* Profile Picture URL */}
-            <div>
-              <label className="block text-sm font-medium text-blue-600 mb-2 uppercase tracking-wide">
-                🖼️ Profile Picture URL
-              </label>
-              <input
-                type="url"
-                name="profile_picture_url"
-                value={profile.profile_picture_url}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter profile picture URL"
-              />
-            </div>
-
-            {/* Banner URL */}
-            <div>
-              <label className="block text-sm font-medium text-blue-600 mb-2 uppercase tracking-wide">
-                🎨 Banner URL
-              </label>
-              <input
-                type="url"
-                name="banner_url"
-                value={profile.banner_url}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter banner image URL"
-              />
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
