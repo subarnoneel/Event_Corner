@@ -9,7 +9,7 @@ const ContactSection = ({ formData, handleInputChange }) => {
       </h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
+        {/* <div>
           <label className="block text-sm font-semibold text-slate-700 mb-2">
             Entry Fee (BDT)
           </label>
@@ -21,7 +21,7 @@ const ContactSection = ({ formData, handleInputChange }) => {
             placeholder="0 for free"
             className="glass-input"
           />
-        </div>
+        </div> */}
 
         <div>
           <label className="block text-sm font-semibold text-slate-700 mb-2">

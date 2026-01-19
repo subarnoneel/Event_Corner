@@ -27,11 +27,13 @@ export const useEventForm = () => {
     venueCity: '',
     venueState: '',
     venueCountry: '',
-    visibility: 'public'
+    visibility: 'public',
+    requirements: ''
   });
 
   const [events, setEvents] = useState([]);
   const [newTag, setNewTag] = useState('');
+  const [additionalInfoFields, setAdditionalInfoFields] = useState([]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -122,6 +124,29 @@ export const useEventForm = () => {
     }));
   };
 
+  // Additional Info handlers
+  const handleAddInfoField = () => {
+    const newField = {
+      id: String(Date.now()),
+      key: '',
+      value: ''
+    };
+    setAdditionalInfoFields([...additionalInfoFields, newField]);
+  };
+
+  const handleRemoveInfoField = (fieldId) => {
+    setAdditionalInfoFields(additionalInfoFields.filter(field => field.id !== fieldId));
+    toast.success('Field removed');
+  };
+
+  const handleInfoFieldChange = (fieldId, fieldType, value) => {
+    setAdditionalInfoFields(additionalInfoFields.map(field => 
+      field.id === fieldId 
+        ? { ...field, [fieldType]: value }
+        : field
+    ));
+  };
+
   return {
     formData,
     setFormData,
@@ -129,6 +154,7 @@ export const useEventForm = () => {
     newTag,
     setNewTag,
     userTimezone,
+    additionalInfoFields,
     handleInputChange,
     handleImageUpload,
     removeAdditionalImage,
@@ -136,6 +162,9 @@ export const useEventForm = () => {
     removeTag,
     addTimeslot,
     removeTimeslot,
-    updateLocation
+    updateLocation,
+    handleAddInfoField,
+    handleRemoveInfoField,
+    handleInfoFieldChange
   };
 };

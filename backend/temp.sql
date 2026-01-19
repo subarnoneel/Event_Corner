@@ -42,6 +42,7 @@ CREATE TABLE events (
     -- Contact Information
     contact_email VARCHAR(255),
     contact_phone VARCHAR(50),
+    website_url TEXT,
 
     -- Additional Info
     requirements TEXT, -- Prerequisites or requirements to participate

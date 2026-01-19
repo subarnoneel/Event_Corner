@@ -11,6 +11,7 @@ import ScheduleSection from './components/ScheduleSection';
 import LocationSection from './components/LocationSection';
 import ContactSection from './components/ContactSection';
 import VisibilitySection from './components/VisibilitySection';
+import AdditionalInfoSection from './components/AdditionalInfoSection';
 import { eventAddStyles } from './styles';
 
 const EventAdd = () => {
@@ -25,6 +26,7 @@ const EventAdd = () => {
     newTag,
     setNewTag,
     userTimezone,
+    additionalInfoFields,
     handleInputChange,
     handleImageUpload,
     removeAdditionalImage,
@@ -32,7 +34,10 @@ const EventAdd = () => {
     removeTag,
     addTimeslot,
     removeTimeslot,
-    updateLocation
+    updateLocation,
+    handleAddInfoField,
+    handleRemoveInfoField,
+    handleInfoFieldChange
   } = useEventForm();
 
   const handleSubmit = async (e) => {
@@ -45,30 +50,46 @@ const EventAdd = () => {
 
     setIsSubmitting(true);
 
-    try {
-      const response = await fetch(API_ENDPOINTS.EVENTS, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.token}`
-        },
-        body: JSON.stringify({
-          ...formData,
-          timeslots: events,
-          timezone: userTimezone
-        })
-      });
+    // Convert additional info fields to JSONB object
+    const additionalInfo = additionalInfoFields.reduce((acc, field) => {
+      if (field.key.trim() && field.value.trim()) {
+        acc[field.key.trim()] = field.value.trim();
+      }
+      return acc;
+    }, {});
 
-      if (!response.ok) throw new Error('Failed to create event');
+    console.log('Form Data:', formData);
+    console.log('Timeslots:', events);
+    console.log('Timezone:', userTimezone);
+    console.log('Additional Info:', additionalInfo);
 
-      toast.success('Event created successfully!');
-      navigate('/dashboard/organizer');
-    } catch (error) {
-      toast.error(error.message || 'Failed to create event');
-      console.error(error);
-    } finally {
-      setIsSubmitting(false);
-    }
+    setIsSubmitting(false);
+
+    // try {
+    //   const response = await fetch(API_ENDPOINTS.EVENTS, {
+    //     method: 'POST',
+    //     headers: {
+    //       'Content-Type': 'application/json',
+    //       'Authorization': `Bearer ${user.token}`
+    //     },
+    //     body: JSON.stringify({
+    //       ...formData,
+    //       timeslots: events,
+    //       timezone: userTimezone,
+    //       additional_info: additionalInfo
+    //     })
+    //   });
+
+    //   if (!response.ok) throw new Error('Failed to create event');
+
+    //   toast.success('Event created successfully!');
+    //   navigate('/dashboard/organizer');
+    // } catch (error) {
+    //   toast.error(error.message || 'Failed to create event');
+    //   console.error(error);
+    // } finally {
+    //   setIsSubmitting(false);
+    // }
   };
 
   return (
@@ -124,6 +145,15 @@ const EventAdd = () => {
           <VisibilitySection
             formData={formData}
             handleInputChange={handleInputChange}
+          />
+
+          <AdditionalInfoSection
+            formData={formData}
+            handleInputChange={handleInputChange}
+            additionalInfoFields={additionalInfoFields}
+            handleAddInfoField={handleAddInfoField}
+            handleRemoveInfoField={handleRemoveInfoField}
+            handleInfoFieldChange={handleInfoFieldChange}
           />
 
           <div className="flex gap-4 justify-end">
