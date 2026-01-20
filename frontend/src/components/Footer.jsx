@@ -12,7 +12,7 @@ const Footer = () => {
         <aside>
           <img src={logos} alt="Event Lagbe" className="h-12" />
           <p className="text-gray-700 transition-colors duration-300">
-            Event Lagbe
+            Event Corner
             <br />
             Your one click Event Finder
           </p>

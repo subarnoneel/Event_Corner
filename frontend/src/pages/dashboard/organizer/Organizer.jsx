@@ -5,7 +5,8 @@ import {
   FiUser,
   FiLogOut,
   FiMenu,
-  FiX
+  FiX,
+  FiCalendar
 } from 'react-icons/fi';
 
 const Organizer = () => {
@@ -26,12 +27,20 @@ const Organizer = () => {
       label: 'Profile Dashboard',
       icon: FiUser,
       description: 'Manage your organizer profile'
+    },
+    {
+      id: 'events',
+      path: '/organizer/events',
+      label: 'My Events',
+      icon: FiCalendar,
+      description: 'View and manage your events'
     }
   ];
 
   const getCurrentMenuItem = () => {
     const currentPath = location.pathname;
     if (currentPath.includes('/profile')) return menuItems[0];
+    if (currentPath.includes('/events')) return menuItems[1];
     return menuItems[0]; // Default to profile
   };
 

@@ -7,7 +7,9 @@ const Navbar = () => {
   const { user, userRole, userData, logOut } = useContext(AuthContext);
   const location = useLocation();
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const dropdownRef = useRef(null);
+  const mobileMenuRef = useRef(null);
   
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -15,19 +17,23 @@ const Navbar = () => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowDropdown(false);
       }
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
+        setShowMobileMenu(false);
+      }
     };
 
-    if (showDropdown) {
+    if (showDropdown || showMobileMenu) {
       document.addEventListener("mousedown", handleClickOutside);
       return () => {
         document.removeEventListener("mousedown", handleClickOutside);
       };
     }
-  }, [showDropdown]);
+  }, [showDropdown, showMobileMenu]);
   
   const handleLogOut = async () => {
     await logOut();
     setShowDropdown(false);
+    setShowMobileMenu(false);
   };
 
   const getDashboardLink = (roleName) => {
@@ -160,6 +166,18 @@ const Navbar = () => {
           Home
         </Link>
      </li>
+     <li>
+        <Link 
+          to="/events" 
+          className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+            isActive("/events") 
+              ? "bg-red-500 text-white shadow-md" 
+              : "text-gray-900 hover:bg-gray-100"
+          }`}
+        >
+          Explore Events
+        </Link>
+      </li>
      {canAddEvent && (
         <li>
           <Link 
@@ -174,34 +192,6 @@ const Navbar = () => {
           </Link>
         </li>
       )}
-     {/* {user && (
-        <li>
-                  <Link 
-          to="/Connect" 
-          className={`${isActive("/Connect") ? "bg-red-500 text-white rounded-md" : "text-gray-900 hover:bg-gray-200"} transition-colors duration-200`}
-        >
-          Connect
-        </Link>
-        </li>
-      )}
-      <li>
-        <Link 
-          to="/events" 
-          className={`${isActive("/events") ? "bg-red-500 text-white rounded-md" : "text-gray-900 hover:bg-gray-200"} transition-colors duration-200`}
-        >
-          Explore Events
-        </Link>
-      </li>
-      {user && (userRole === "organization" || userRole === "organizer") && (
-        <li>
-                  <Link 
-          to="/add-event" 
-          className={`${isActive("/add-event") ? "bg-red-500 text-white rounded-md" : "text-gray-900 hover:bg-gray-200"} transition-colors duration-200`}
-        >
-          Add Event
-        </Link>
-        </li> 
-      )}*/}
     </>
   ); 
   
@@ -209,62 +199,187 @@ const Navbar = () => {
     <nav className="bg-white shadow-md border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
-          {/* Logo */}
-          <Link to="/" className="flex-shrink-0 hover:opacity-80 transition-opacity duration-200">
-            <img src={logos} alt="Event Lagbe" className="h-12 w-auto" />
-          </Link>
+          {/* Left: Hamburger Menu (Mobile Only) + Logo */}
+          <div className="flex items-center gap-4">
+            {/* Hamburger Menu Button - Only on Mobile */}
+            <button
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200 focus:outline-none"
+              aria-label="Menu"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6 text-gray-900"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              </svg>
+            </button>
 
-          {/* Desktop Navigation */}
+            {/* Logo */}
+            <Link to="/" className="flex-shrink-0 hover:opacity-80 transition-opacity duration-200">
+              <img src={logos} alt="Event Lagbe" className="h-12 w-auto" />
+            </Link>
+          </div>
+
+          {/* Desktop Navigation - Hidden on Mobile */}
           <div className="hidden lg:flex items-center gap-8">
             <ul className="flex gap-6 items-center">
               {list}
             </ul>
           </div>
 
-          {/* Desktop Auth Buttons */}
-          <div className="hidden lg:flex items-center gap-3">
+          {/* Right: Auth Buttons or Profile */}
+          <div className="flex items-center gap-3">
             {navEnd}
-          </div>
-
-          {/* Mobile Menu Button */}
-          <div className="lg:hidden">
-            <div className="dropdown dropdown-end">
-              <div tabIndex={0} role="button" className="btn btn-ghost btn-circle hover:bg-gray-200 transition-colors duration-200">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6 text-gray-900"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M4 6h16M4 12h8m-8 6h16"
-                  />
-                </svg>
-              </div>
-              <ul
-                tabIndex={0}
-                className="dropdown-content menu bg-white rounded-box z-[1] w-52 p-2 shadow-lg border border-gray-200"
-              >
-                {list}
-                <li className="border-t border-gray-200 mt-2 pt-2">
-                  <Link to="/login" className="text-red-500 font-semibold hover:bg-red-50">
-                    Login
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/register" className="text-gray-900 hover:bg-gray-100">
-                    Register
-                  </Link>
-                </li>
-              </ul>
-            </div>
           </div>
         </div>
       </div>
+
+      {/* Dropdown Menu - Only for Mobile */}
+      {showMobileMenu && (
+        <div 
+          ref={mobileMenuRef}
+          className="lg:hidden absolute left-0 right-0 top-20 bg-white border-b border-gray-200 shadow-xl z-40 animate-in slide-in-from-top duration-200"
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            {/* User Profile Section (if logged in) */}
+            {user && userData && (
+              <div className="mb-6 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+                <div className="flex items-center gap-3 mb-3">
+                  <img
+                    src={userData?.profile_picture_url || "https://res.cloudinary.com/dfvwazcdk/image/upload/v1753161431/generalProfilePicture_inxppe.png"}
+                    alt="Profile"
+                    className="w-14 h-14 rounded-full object-cover ring-2 ring-blue-300"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-gray-900 text-base truncate">{userData?.full_name || "User"}</p>
+                    <p className="text-sm text-gray-600 truncate">{user.email}</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {userData?.roles && userData.roles.length > 0 ? (
+                    userData.roles.map((role) => (
+                      <span
+                        key={role.role_id}
+                        className={`text-xs px-3 py-1.5 rounded-full font-medium ${getRoleBadgeColor(role.role_name)}`}
+                      >
+                        {role.display_name || role.role_name}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-gray-600 capitalize font-medium">{userRole || "User"}</span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {/* Navigation Links */}
+              <div>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 px-2">Navigation</h3>
+                <ul className="space-y-1">
+                  <li>
+                    <Link 
+                      to="/" 
+                      onClick={() => setShowMobileMenu(false)}
+                      className={`block px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
+                        isActive("/") 
+                          ? "bg-red-500 text-white shadow-md" 
+                          : "text-gray-900 hover:bg-gray-100"
+                      }`}
+                    >
+                      🏠 Home
+                    </Link>
+                  </li>
+                  <li>
+                    <Link 
+                      to="/events" 
+                      onClick={() => setShowMobileMenu(false)}
+                      className={`block px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
+                        isActive("/events") 
+                          ? "bg-red-500 text-white shadow-md" 
+                          : "text-gray-900 hover:bg-gray-100"
+                      }`}
+                    >
+                      🎯 Explore Events
+                    </Link>
+                  </li>
+                  {canAddEvent && (
+                    <li>
+                      <Link 
+                        to="/events/create" 
+                        onClick={() => setShowMobileMenu(false)}
+                        className={`block px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
+                          isActive("/events/create") 
+                            ? "bg-red-500 text-white shadow-md" 
+                            : "text-gray-900 hover:bg-gray-100"
+                        }`}
+                      >
+                        ➕ Add Event
+                      </Link>
+                    </li>
+                  )}
+                </ul>
+              </div>
+
+              {/* Dashboard Links (if logged in) */}
+              {user && userData?.roles && userData.roles.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 px-2">Dashboards</h3>
+                  <ul className="space-y-1">
+                    {userData.roles.map((role) => (
+                      <li key={role.role_id}>
+                        <Link
+                          to={getDashboardLink(role.role_name)}
+                          onClick={() => setShowMobileMenu(false)}
+                          className="block px-4 py-3 rounded-lg font-medium text-gray-900 hover:bg-blue-50 transition-all duration-200"
+                        >
+                          📊 {role.display_name || role.role_name} Dashboard
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Auth Actions - Only show if not logged in */}
+              {!user && (
+                <div>
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 px-2">Account</h3>
+                  <ul className="space-y-1">
+                    <li>
+                      <Link 
+                        to="/login" 
+                        onClick={() => setShowMobileMenu(false)}
+                        className="block px-4 py-3 rounded-lg font-medium text-red-500 hover:bg-red-50 transition-all duration-200"
+                      >
+                        🔐 Login
+                      </Link>
+                    </li>
+                    <li>
+                      <Link 
+                        to="/register" 
+                        onClick={() => setShowMobileMenu(false)}
+                        className="block px-4 py-3 rounded-lg font-medium text-gray-900 hover:bg-gray-100 transition-all duration-200"
+                      >
+                        📝 Register
+                      </Link>
+                    </li>
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </nav>
   );
 };

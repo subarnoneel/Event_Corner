@@ -3,6 +3,7 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 import Home from "../pages/Home";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
+import ExploreEvents from "../pages/ExploreEvents";
 import Superadmin from "../pages/dashboard/superadmin/Superadmin";
 import SuperadminProfile from "../pages/dashboard/superadmin/SuperadminProfile";
 import InstitutionManagement from "../pages/dashboard/superadmin/InstitutionManagement";
@@ -13,9 +14,11 @@ import AdminInstitutionManagement from "../pages/dashboard/admin/AdminInstitutio
 import AdminUserManagement from "../pages/dashboard/admin/AdminUserManagement";
 import Institution from "../pages/dashboard/institution/Institution";
 import InstitutionProfile from "../pages/dashboard/institution/InstitutionProfile";
+import InstitutionMyEvents from "../pages/dashboard/institution/MyEvents";
 import ManageOrganizers from "../pages/dashboard/institution/ManageOrganizers";
 import Organizer from "../pages/dashboard/organizer/Organizer";
 import OrganizerProfile from "../pages/dashboard/organizer/OrganizerProfile";
+import OrganizerMyEvents from "../pages/dashboard/organizer/MyEvents";
 import Participant from "../pages/dashboard/participant/Participant";
 import ParticipantProfile from "../pages/dashboard/participant/ParticipantProfile";
 import MainLayout from "../components/MainLayout";
@@ -39,6 +42,10 @@ const PublicRoutes = createBrowserRouter([
             {
                 path: "/register",
                 element: <Register />,
+            },
+            {
+                path: "/events",
+                element: <ExploreEvents />,
             },
             {
                 path: "/superadmin",
@@ -97,6 +104,10 @@ const PublicRoutes = createBrowserRouter([
                         element: <InstitutionProfile />
                     },
                     {
+                        path: "events",
+                        element: <InstitutionMyEvents />
+                    },
+                    {
                         path: "organizers",
                         element: <ManageOrganizers />
                     },
@@ -113,6 +124,10 @@ const PublicRoutes = createBrowserRouter([
                     {
                         path: "profile",
                         element: <OrganizerProfile />
+                    },
+                    {
+                        path: "events",
+                        element: <OrganizerMyEvents />
                     },
                 ]
             },

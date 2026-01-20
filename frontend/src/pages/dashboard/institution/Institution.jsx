@@ -6,7 +6,8 @@ import {
   FiUsers,
   FiLogOut,
   FiMenu,
-  FiX
+  FiX,
+  FiCalendar
 } from 'react-icons/fi';
 
 const Institution = () => {
@@ -29,6 +30,13 @@ const Institution = () => {
       description: 'Manage your institution profile'
     },
     {
+      id: 'events',
+      path: '/institution/events',
+      label: 'My Events',
+      icon: FiCalendar,
+      description: 'View and manage your events'
+    },
+    {
       id: 'organizers',
       path: '/institution/organizers',
       label: 'Manage Organizers',
@@ -40,7 +48,8 @@ const Institution = () => {
   const getCurrentMenuItem = () => {
     const currentPath = location.pathname;
     if (currentPath.includes('/profile')) return menuItems[0];
-    if (currentPath.includes('/organizers')) return menuItems[1];
+    if (currentPath.includes('/events')) return menuItems[1];
+    if (currentPath.includes('/organizers')) return menuItems[2];
     return menuItems[0]; // Default to profile
   };
 
