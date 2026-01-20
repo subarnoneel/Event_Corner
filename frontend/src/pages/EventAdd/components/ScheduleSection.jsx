@@ -5,10 +5,22 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import TimeslotModal from './TimeslotModal';
+import { TIMEZONES } from '../constants';
 
-const ScheduleSection = ({events, addTimeslot, removeTimeslot, userTimezone }) => {
+const ScheduleSection = ({events, addTimeslot, removeTimeslot, updateTimeslot, userTimezone, timezoneOffset, formData, handleInputChange }) => {
   const [showTimeslotModal, setShowTimeslotModal] = useState(false);
   const [showTimezoneInfo, setShowTimezoneInfo] = useState(false);
+
+  // Helper function to convert Date object to ISO string with timezone
+  const formatDateWithTimezone = (date, offset) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${offset}`;
+  };
 
   const handleDateClick = () => {
     setShowTimeslotModal(true);
@@ -18,6 +30,28 @@ const ScheduleSection = ({events, addTimeslot, removeTimeslot, userTimezone }) =
     if (window.confirm(`Delete timeslot '${clickInfo.event.title}'?`)) {
       removeTimeslot(clickInfo.event.id);
     }
+  };
+
+  const handleEventDrop = (info) => {
+    // Convert Date objects to ISO strings with timezone offset
+    const startISO = formatDateWithTimezone(info.event.start, timezoneOffset);
+    const endISO = formatDateWithTimezone(info.event.end, timezoneOffset);
+    
+    updateTimeslot(info.event.id, {
+      start: startISO,
+      end: endISO
+    });
+  };
+
+  const handleEventResize = (info) => {
+    // Convert Date objects to ISO strings with timezone offset
+    const startISO = formatDateWithTimezone(info.event.start, timezoneOffset);
+    const endISO = formatDateWithTimezone(info.event.end, timezoneOffset);
+    
+    updateTimeslot(info.event.id, {
+      start: startISO,
+      end: endISO
+    });
   };
 
   const handleAddTimeslot = (slotData) => {
@@ -49,6 +83,29 @@ const ScheduleSection = ({events, addTimeslot, removeTimeslot, userTimezone }) =
       )}
 
       <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 mb-2">
+            <FiClock className="inline mr-1" />
+            Event Timezone *
+          </label>
+          <select
+            name="eventTimezone"
+            value={formData.eventTimezone}
+            onChange={handleInputChange}
+            className="glass-input"
+            required
+          >
+            {TIMEZONES.map(tz => (
+              <option key={tz.value} value={tz.value}>
+                {tz.label}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-slate-500 mt-1">
+            Select the timezone where the event will take place
+          </p>
+        </div>
+
         <div className="calendar-container">
           <FullCalendar
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -61,6 +118,8 @@ const ScheduleSection = ({events, addTimeslot, removeTimeslot, userTimezone }) =
             events={events}
             dateClick={handleDateClick}
             eventClick={handleEventClick}
+            eventDrop={handleEventDrop}
+            eventResize={handleEventResize}
             editable={true}
             selectable={true}
             selectMirror={true}
@@ -84,12 +143,14 @@ const ScheduleSection = ({events, addTimeslot, removeTimeslot, userTimezone }) =
                     <p className="text-sm text-slate-600 mt-1">
                       {new Date(event.start).toLocaleString('en-US', {
                         dateStyle: 'medium',
-                        timeStyle: 'short'
+                        timeStyle: 'short',
+                        timeZone: userTimezone
                       })}
                       {' → '}
                       {new Date(event.end).toLocaleString('en-US', {
                         dateStyle: 'medium',
-                        timeStyle: 'short'
+                        timeStyle: 'short',
+                        timeZone: userTimezone
                       })}
                     </p>
                   </div>
@@ -110,6 +171,8 @@ const ScheduleSection = ({events, addTimeslot, removeTimeslot, userTimezone }) =
           <TimeslotModal
             onClose={() => setShowTimeslotModal(false)}
             onAdd={handleAddTimeslot}
+            timezoneOffset={timezoneOffset}
+            eventTimezone={userTimezone}
           />
         )}
       </div>

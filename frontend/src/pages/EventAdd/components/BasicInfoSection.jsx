@@ -2,8 +2,15 @@ import React from 'react';
 import { FiList, FiTag } from 'react-icons/fi';
 import { MdCategory } from 'react-icons/md';
 import { EVENT_CATEGORIES } from '../constants';
+import MDEditor from '@uiw/react-md-editor';
+import '@uiw/react-md-editor/markdown-editor.css';
+import '@uiw/react-markdown-preview/markdown.css';
 
 const BasicInfoSection = ({ formData, handleInputChange, newTag, setNewTag, handleAddTag, removeTag }) => {
+  const handleDescriptionChange = (value) => {
+    handleInputChange({ target: { name: 'description', value: value || '' } });
+  };
+
   return (
     <div className="glass-card p-6">
       <h2 className="text-2xl font-bold text-slate-800 mb-4 flex items-center">
@@ -31,15 +38,15 @@ const BasicInfoSection = ({ formData, handleInputChange, newTag, setNewTag, hand
           <label className="block text-sm font-semibold text-slate-700 mb-2">
             Description *
           </label>
-          <textarea
-            name="description"
-            value={formData.description}
-            onChange={handleInputChange}
-            rows={5}
-            placeholder="Describe your event..."
-            className="glass-input resize-none"
-            required
-          />
+          <div className="markdown-editor-wrapper" data-color-mode="light">
+            <MDEditor
+              value={formData.description}
+              onChange={handleDescriptionChange}
+              preview="edit"
+              height={450}
+              visibleDragbar={false}
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

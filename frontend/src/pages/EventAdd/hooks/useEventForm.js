@@ -11,7 +11,6 @@ export const useEventForm = () => {
     description: '',
     category: '',
     tags: [],
-    entryFee: '',
     bannerImage: '',
     thumbnailImage: '',
     additionalImages: [],
@@ -21,6 +20,7 @@ export const useEventForm = () => {
     venueType: 'physical',
     venueName: '',
     venueAddress: '',
+    eventTimezone: 'Asia/Dhaka',
     venueLat: null,
     venueLng: null,
     googlePlaceId: '',
@@ -55,7 +55,8 @@ export const useEventForm = () => {
     const uploadingToast = toast.loading(`Uploading ${type}...`);
 
     try {
-      const imageUrl = await uploadToCloudinary(file);
+      const result = await uploadToCloudinary(file);
+      const imageUrl = result.url; // Extract URL from the result object
       
       if (type === 'banner') {
         setFormData(prev => ({ ...prev, bannerImage: imageUrl }));
@@ -104,8 +105,8 @@ export const useEventForm = () => {
     const newEvent = {
       id: String(Date.now()),
       title: slotData.title,
-      start: slotData.start,
-      end: slotData.end,
+      start: slotData.start, // Already in ISO format with timezone from TimeslotModal
+      end: slotData.end,     // Already in ISO format with timezone from TimeslotModal
       color: '#3b82f6'
     };
     setEvents([...events, newEvent]);
@@ -115,6 +116,15 @@ export const useEventForm = () => {
   const removeTimeslot = (eventId) => {
     setEvents(events.filter(event => event.id !== eventId));
     toast.success('Timeslot deleted');
+  };
+
+  const updateTimeslot = (eventId, updates) => {
+    setEvents(events.map(event => 
+      event.id === eventId 
+        ? { ...event, ...updates }
+        : event
+    ));
+    toast.success('Timeslot updated');
   };
 
   const updateLocation = (locationData) => {
@@ -162,6 +172,7 @@ export const useEventForm = () => {
     removeTag,
     addTimeslot,
     removeTimeslot,
+    updateTimeslot,
     updateLocation,
     handleAddInfoField,
     handleRemoveInfoField,

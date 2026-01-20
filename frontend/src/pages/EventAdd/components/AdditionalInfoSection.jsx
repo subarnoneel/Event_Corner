@@ -1,5 +1,8 @@
 import React from 'react';
 import { FiInfo, FiPlus, FiX } from 'react-icons/fi';
+import MDEditor from '@uiw/react-md-editor';
+import '@uiw/react-md-editor/markdown-editor.css';
+import '@uiw/react-markdown-preview/markdown.css';
 
 const AdditionalInfoSection = ({ 
   formData, 
@@ -9,6 +12,10 @@ const AdditionalInfoSection = ({
   handleRemoveInfoField,
   handleInfoFieldChange
 }) => {
+  const handleRequirementsChange = (value) => {
+    handleInputChange({ target: { name: 'requirements', value: value || '' } });
+  };
+
   return (
     <div className="glass-card p-6">
       <h2 className="text-2xl font-bold text-slate-800 mb-4">
@@ -21,14 +28,15 @@ const AdditionalInfoSection = ({
         <label className="block text-sm font-semibold text-slate-700 mb-2">
           Requirements / Prerequisites
         </label>
-        <textarea
-          name="requirements"
-          value={formData.requirements || ''}
-          onChange={handleInputChange}
-          placeholder="E.g., Prior knowledge of programming, Bring your own laptop, Age 18+, etc."
-          rows="4"
-          className="glass-input resize-none"
-        />
+        <div className="markdown-editor-wrapper" data-color-mode="light">
+          <MDEditor
+            value={formData.requirements || ''}
+            onChange={handleRequirementsChange}
+            preview="edit"
+            height={400}
+            visibleDragbar={false}
+          />
+        </div>
         <p className="text-xs text-slate-500 mt-1">
           List any prerequisites or requirements for participants
         </p>

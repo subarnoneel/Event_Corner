@@ -39,6 +39,12 @@ export const API_ENDPOINTS = {
     // Institution - Organizer Management
     INSTITUTION_GET_ORGANIZERS: (institutionId) => `${API_BASE_URL}/api/institution/${institutionId}/organizers`,
     INSTITUTION_VERIFY_ORGANIZER: (organizerId) => `${API_BASE_URL}/api/institution/organizers/${organizerId}/verify`,
+    
+    // Events Management
+    EVENTS: `${API_BASE_URL}/api/events`,
+    EVENT_BY_ID: (eventId) => `${API_BASE_URL}/api/events/${eventId}`,
+    UPDATE_EVENT: (eventId) => `${API_BASE_URL}/api/events/${eventId}`,
+    DELETE_EVENT: (eventId) => `${API_BASE_URL}/api/events/${eventId}`,
 };
 
 export default API_BASE_URL;

@@ -13,9 +13,10 @@ import ContactSection from './components/ContactSection';
 import VisibilitySection from './components/VisibilitySection';
 import AdditionalInfoSection from './components/AdditionalInfoSection';
 import { eventAddStyles } from './styles';
+import { TIMEZONES } from './constants';
 
 const EventAdd = () => {
-  const { user } = useContext(AuthContext);
+  const { user, userData } = useContext(AuthContext);
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -34,11 +35,15 @@ const EventAdd = () => {
     removeTag,
     addTimeslot,
     removeTimeslot,
+    updateTimeslot,
     updateLocation,
     handleAddInfoField,
     handleRemoveInfoField,
     handleInfoFieldChange
   } = useEventForm();
+
+  // Get timezone offset from TIMEZONES array
+  const timezoneOffset = TIMEZONES.find(tz => tz.value === formData.eventTimezone)?.offset || '+06:00';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -58,38 +63,86 @@ const EventAdd = () => {
       return acc;
     }, {});
 
-    console.log('Form Data:', formData);
-    console.log('Timeslots:', events);
-    console.log('Timezone:', userTimezone);
-    console.log('Additional Info:', additionalInfo);
+    // Prepare timeslots for backend (remove frontend-only id field)
+    const timeslotsForBackend = events.map(e => ({
+      title: e.title,
+      start: e.start,
+      end: e.end,
+      color: e.color,
+      description: '' // Optional field
+    }));
 
-    setIsSubmitting(false);
+    console.log('=== EVENT CREATION DEBUG ===');
+    console.log('Raw events from state:', events);
+    console.log('Timeslots for backend:', timeslotsForBackend);
+    console.log('Timezone offset being used:', timezoneOffset);
+    console.log('Selected Event Timezone:', formData.eventTimezone);
+    console.log('User Data:', userData);
+    console.log('User ID (UUID):', userData?.id);
+    console.log('===========================');
 
-    // try {
-    //   const response = await fetch(API_ENDPOINTS.EVENTS, {
-    //     method: 'POST',
-    //     headers: {
-    //       'Content-Type': 'application/json',
-    //       'Authorization': `Bearer ${user.token}`
-    //     },
-    //     body: JSON.stringify({
-    //       ...formData,
-    //       timeslots: events,
-    //       timezone: userTimezone,
-    //       additional_info: additionalInfo
-    //     })
-    //   });
-
-    //   if (!response.ok) throw new Error('Failed to create event');
-
-    //   toast.success('Event created successfully!');
-    //   navigate('/dashboard/organizer');
-    // } catch (error) {
-    //   toast.error(error.message || 'Failed to create event');
-    //   console.error(error);
-    // } finally {
+    // Validate user ID is available
+    // if (!userData?.user_id) {
+    //   toast.error('User authentication error. Please refresh and try again.');
     //   setIsSubmitting(false);
+    //   return;
     // }
+
+    try {
+      // Map frontend field names to backend parameter names
+      const eventData = {
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        tags: formData.tags,
+        bannerImage: formData.bannerImage,
+        thumbnailImage: formData.thumbnailImage,
+        additionalImages: formData.additionalImages,
+        venueType: formData.venueType,
+        venueName: formData.venueName,
+        eventTimezone: formData.eventTimezone,
+        venueAddress: formData.venueAddress,
+        venueLat: formData.venueLat,
+        venueLng: formData.venueLng,
+        googlePlaceId: formData.googlePlaceId,
+        venueCity: formData.venueCity,
+        venueState: formData.venueState,
+        venueCountry: formData.venueCountry,
+        contactEmail: formData.contactEmail,
+        contactPhone: formData.contactPhone,
+        website: formData.website,
+        visibility: formData.visibility,
+        requirements: formData.requirements,
+        additional_info: additionalInfo,
+        timeslots: timeslotsForBackend,
+        created_by: userData.user_id, // Backend expects user_id field
+        institution_id: userData.institution_id || null // If user is organizer under institution
+      };
+
+      console.log('Event Data being sent:', eventData);
+
+      const response = await fetch(API_ENDPOINTS.EVENTS, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(eventData)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to create event');
+      }
+
+      toast.success('Event created successfully!');
+      navigate('/');
+    } catch (error) {
+      toast.error(error.message || 'Failed to create event');
+      console.error('Event creation error:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -128,7 +181,9 @@ const EventAdd = () => {
             events={events}
             addTimeslot={addTimeslot}
             removeTimeslot={removeTimeslot}
-            userTimezone={userTimezone}
+            updateTimeslot={updateTimeslot}
+            userTimezone={formData.eventTimezone}
+            timezoneOffset={timezoneOffset}
           />
 
           <LocationSection

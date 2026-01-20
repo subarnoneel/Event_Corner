@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
 
-const TimeslotModal = ({ onClose, onAdd }) => {
+const TimeslotModal = ({ onClose, onAdd, timezoneOffset, eventTimezone }) => {
   const [slotData, setSlotData] = useState({
     title: '',
     start: '',
@@ -10,7 +10,32 @@ const TimeslotModal = ({ onClose, onAdd }) => {
 
   const handleSubmit = () => {
     if (slotData.title && slotData.start && slotData.end) {
-      onAdd(slotData);
+      // datetime-local gives us time without timezone info
+      // We need to treat it as being in the event timezone, not the browser timezone
+      // Create a date object and format it with the event timezone offset
+      
+      const startDate = new Date(slotData.start);
+      const endDate = new Date(slotData.end);
+      
+      // Get the ISO string without timezone, then append the event timezone offset
+      const startISO = slotData.start.replace('T', 'T').split('.')[0];
+      const endISO = slotData.end.replace('T', 'T').split('.')[0];
+      
+      const startWithTimezone = startISO + ':00' + timezoneOffset;
+      const endWithTimezone = endISO + ':00' + timezoneOffset;
+      
+      console.log('Timeslot created:', {
+        input: { start: slotData.start, end: slotData.end },
+        output: { start: startWithTimezone, end: endWithTimezone },
+        timezone: eventTimezone,
+        offset: timezoneOffset
+      });
+      
+      onAdd({
+        ...slotData,
+        start: startWithTimezone,
+        end: endWithTimezone
+      });
       onClose();
     } else {
       toast.error('Please fill all fields');

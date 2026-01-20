@@ -141,6 +141,11 @@ const Navbar = () => {
     </>
   );
 
+  // Check if user has organizer or institution role
+  const canAddEvent = userData?.roles && userData.roles.some(role => 
+    role.role_name === 'organizer' || role.role_name === 'institution'
+  );
+
   const list = (
     <>
       <li>
@@ -155,6 +160,20 @@ const Navbar = () => {
           Home
         </Link>
      </li>
+     {canAddEvent && (
+        <li>
+          <Link 
+            to="/events/create" 
+            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+              isActive("/events/create") 
+                ? "bg-red-500 text-white shadow-md" 
+                : "text-gray-900 hover:bg-gray-100"
+            }`}
+          >
+            Add Event
+          </Link>
+        </li>
+      )}
      {/* {user && (
         <li>
                   <Link 

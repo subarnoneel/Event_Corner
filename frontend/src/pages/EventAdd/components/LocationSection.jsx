@@ -48,33 +48,39 @@ const LocationSection = ({ formData, handleInputChange, updateLocation }) => {
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2">
-            Venue Name
-          </label>
-          <input
-            type="text"
-            name="venueName"
-            value={formData.venueName}
-            onChange={handleInputChange}
-            placeholder="e.g., Grand Convention Hall"
-            className="glass-input"
-          />
-        </div>
+        {formData.venueType === 'physical' && (
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">
+              Venue Name
+            </label>
+            <input
+              type="text"
+              name="venueName"
+              value={formData.venueName}
+              onChange={handleInputChange}
+              placeholder="e.g., Grand Convention Hall"
+              className="glass-input"
+            />
+          </div>
+        )}
 
         {formData.venueType === 'online' ? (
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-2">
-              Meeting Link / Platform
+              Platform Name *
             </label>
-            <textarea
-              name="venueAddress"
-              value={formData.venueAddress}
+            <input
+              type="text"
+              name="venueName"
+              value={formData.venueName}
               onChange={handleInputChange}
-              rows={3}
-              placeholder="e.g., Zoom link or Google Meet URL"
-              className="glass-input resize-none"
+              placeholder="e.g., Zoom, Google Meet, Microsoft Teams, Discord"
+              className="glass-input"
+              required
             />
+            <p className="text-xs text-slate-500 mt-1">
+              Specify the online platform where the event will be hosted
+            </p>
           </div>
         ) : (
           <div className="space-y-4">

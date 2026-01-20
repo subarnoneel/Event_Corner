@@ -125,4 +125,58 @@ export const eventAddStyles = `
     border-color: #3b82f6;
     background: rgba(59, 130, 246, 0.1);
   }
+
+  /* Markdown Editor Styling */
+  .markdown-editor-wrapper {
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .markdown-editor-wrapper .w-md-editor {
+    background: rgba(255, 255, 255, 0.85) !important;
+    border: 2px solid rgba(148, 163, 184, 0.3) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+  }
+
+  .markdown-editor-wrapper .w-md-editor:focus-within {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+  }
+
+  .markdown-editor-wrapper .w-md-editor-toolbar {
+    background: rgba(241, 245, 249, 0.8) !important;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2) !important;
+    padding: 8px !important;
+  }
+
+  .markdown-editor-wrapper .w-md-editor-toolbar button {
+    color: #475569 !important;
+  }
+
+  .markdown-editor-wrapper .w-md-editor-toolbar button:hover {
+    background: rgba(59, 130, 246, 0.1) !important;
+    color: #3b82f6 !important;
+  }
+
+  .markdown-editor-wrapper .w-md-editor-text {
+    background: transparent !important;
+  }
+
+  .markdown-editor-wrapper .w-md-editor-text-pre,
+  .markdown-editor-wrapper .w-md-editor-text-input {
+    font-size: 14px !important;
+    line-height: 1.6 !important;
+    color: #1e293b !important;
+  }
+
+  .markdown-editor-wrapper .w-md-editor-text-pre > code,
+  .markdown-editor-wrapper .w-md-editor-text-input {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif !important;
+  }
+
+  .markdown-editor-wrapper .w-md-editor-preview {
+    background: rgba(255, 255, 255, 0.9) !important;
+    padding: 16px !important;
+  }
 `;

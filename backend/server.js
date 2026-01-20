@@ -785,6 +785,203 @@ app.patch('/api/institution/organizers/:organizerId/verify', async (req, res) =>
 });
 
 
+// ============================================================================
+// EVENT MANAGEMENT ENDPOINTS
+// ============================================================================
+
+/**
+ * POST /api/events
+ * Create a new event with timeslots
+ */
+app.post('/api/events', async (req, res) => {
+  try {
+    const {
+      title, description, category, tags,
+      bannerImage, thumbnailImage, additionalImages,
+      venueType, venueName, eventTimezone,
+      venueAddress, venueLat, venueLng, googlePlaceId,
+      venueCity, venueState, venueCountry,
+      contactEmail, contactPhone, website,
+      visibility, requirements, additional_info,
+      timeslots,
+      created_by, institution_id
+    } = req.body;
+
+    // Validate required fields
+    if (!title || !category || !venueType) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: title, category, and venueType are required'
+      });
+    }
+
+    if (!created_by) {
+      return res.status(400).json({
+        success: false,
+        error: 'created_by (user ID) is required'
+      });
+    }
+
+    // Call the stored procedure
+    const { data, error } = await supabase.rpc('create_event_with_timeslots', {
+      p_title: title,
+      p_description: description || null,
+      p_category: category,
+      p_tags: tags || [],
+      p_banner_url: bannerImage || null,
+      p_thumbnail_url: thumbnailImage || null,
+      p_image_urls: additionalImages || [],
+      p_venue_type: venueType,
+      p_venue_name: venueName || null,
+      p_event_timezone: eventTimezone || 'Asia/Dhaka',
+      p_venue_address: venueAddress || null,
+      p_venue_lat: venueLat || null,
+      p_venue_lng: venueLng || null,
+      p_google_place_id: googlePlaceId || null,
+      p_venue_city: venueCity || null,
+      p_venue_state: venueState || null,
+      p_venue_country: venueCountry || null,
+      p_created_by: created_by,
+      p_institution_id: institution_id || null,
+      p_status: 'active',
+      p_visibility: visibility || 'public',
+      p_contact_email: contactEmail || null,
+      p_contact_phone: contactPhone || null,
+      p_website_url: website || null,
+      p_requirements: requirements || null,
+      p_additional_info: additional_info || null,
+      p_timeslots: timeslots || []
+    });
+
+    if (error) {
+      console.error('Database error creating event:', error);
+      return res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to create event'
+      });
+    }
+
+    // Check if the procedure returned success
+    if (data && data.length > 0) {
+      const result = data[0];
+      if (result.success) {
+        res.status(201).json({
+          success: true,
+          message: result.message,
+          event_id: result.event_id
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          error: result.message
+        });
+      }
+    } else {
+      res.status(500).json({
+        success: false,
+        error: 'Unexpected response from database'
+      });
+    }
+  } catch (err) {
+    console.error('Unexpected error creating event:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+/**
+ * GET /api/events/:eventId
+ * Get event details by ID
+ */
+app.get('/api/events/:eventId', async (req, res) => {
+  try {
+    const { eventId } = req.params;
+
+    const { data, error } = await supabase.rpc('get_event_by_id', {
+      p_event_id: eventId
+    });
+
+    if (error) {
+      console.error('Database error fetching event:', error);
+      return res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+
+    if (!data || data.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Event not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      event: data[0]
+    });
+  } catch (err) {
+    console.error('Unexpected error fetching event:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+/**
+ * GET /api/events
+ * Get all events with filters and pagination
+ */
+app.get('/api/events', async (req, res) => {
+  try {
+    const {
+      category,
+      visibility,
+      status = 'active',
+      created_by,
+      institution_id,
+      search,
+      limit = 20,
+      offset = 0
+    } = req.query;
+
+    const { data, error } = await supabase.rpc('get_events', {
+      p_category: category || null,
+      p_visibility: visibility || null,
+      p_status: status,
+      p_created_by: created_by || null,
+      p_institution_id: institution_id || null,
+      p_search: search || null,
+      p_limit: parseInt(limit),
+      p_offset: parseInt(offset)
+    });
+
+    if (error) {
+      console.error('Database error fetching events:', error);
+      return res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+
+    res.json({
+      success: true,
+      events: data || [],
+      count: data ? data.length : 0
+    });
+  } catch (err) {
+    console.error('Unexpected error fetching events:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
