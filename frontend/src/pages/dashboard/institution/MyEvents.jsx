@@ -20,10 +20,10 @@ const MyEvents = () => {
       setLoading(true);
       setError(null);
       
-      // Build query parameters - fetch events by institution_id if available
+      // Build query parameters - fetch events created by this specific user
       const params = new URLSearchParams();
-      if (userData?.institution_id) {
-        params.append('institution_id', userData.institution_id);
+      if (userData?.user_id || user.uid) {
+        params.append('created_by', userData?.user_id || user.uid);
       }
       params.append('limit', '100'); // Fetch more events
       
@@ -94,7 +94,7 @@ const MyEvents = () => {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">My Events</h2>
-          <p className="text-gray-600 mt-1">Events created by your institution</p>
+          <p className="text-gray-600 mt-1">Events you have created</p>
         </div>
         <div className="text-sm text-gray-600">
           Total Events: <span className="font-bold text-blue-600">{events.length}</span>

@@ -1,5 +1,5 @@
 // src/pages/Home.jsx
-import React, { useState, useEffect, useMemo, useContext } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { Link } from "react-router-dom";
 import AuthContext from "../providers/AuthContext";
 import {
@@ -222,6 +222,17 @@ const Home = () => {
                   <h3 className="text-xl font-bold">Latest Events</h3>
                 </div>
                 <p className="text-blue-100 mt-2">Fresh events just added</p>
+              </div>          
+            </div>
+
+            {/* Your Events */}
+            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+              <div className="bg-gradient-to-r from-green-500 to-teal-500 p-6 text-white">
+                <div className="flex items-center gap-3">
+                  <FiCheckCircle className="text-2xl" />
+                  <h3 className="text-xl font-bold">Your Events</h3>
+                </div>
+                <p className="text-green-100 mt-2">Events you've created/joined</p>
               </div>          
             </div>
           </div>

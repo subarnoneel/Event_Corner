@@ -20,10 +20,10 @@ const MyEvents = () => {
       setLoading(true);
       setError(null);
       
-      // Build query parameters - fetch events by created_by (user id)
+      // Build query parameters - fetch events created by this specific user
       const params = new URLSearchParams();
-      if (user.uid) {
-        params.append('created_by', user.uid);
+      if (userData?.user_id || user.uid) {
+        params.append('created_by', userData?.user_id || user.uid);
       }
       params.append('limit', '100'); // Fetch more events
       
@@ -70,7 +70,7 @@ const MyEvents = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
       </div>
     );
   }
@@ -97,7 +97,7 @@ const MyEvents = () => {
           <p className="text-gray-600 mt-1">Events you have created</p>
         </div>
         <div className="text-sm text-gray-600">
-          Total Events: <span className="font-bold text-purple-600">{events.length}</span>
+          Total Events: <span className="font-bold text-blue-600">{events.length}</span>
         </div>
       </div>
 
@@ -110,7 +110,7 @@ const MyEvents = () => {
           <p className="text-gray-600 mb-6">You haven't created any events yet.</p>
           <a 
             href="/events/create" 
-            className="inline-block px-6 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors font-medium"
+            className="inline-block px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
           >
             Create Your First Event
           </a>
@@ -123,7 +123,7 @@ const MyEvents = () => {
               className="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden"
             >
               {/* Event Image */}
-              <div className="h-48 bg-gradient-to-br from-purple-400 to-purple-600">
+              <div className="h-48 bg-gradient-to-br from-blue-400 to-blue-600">
                 {event.banner_url || event.thumbnail_url ? (
                   <img 
                     src={event.banner_url || event.thumbnail_url} 
@@ -173,7 +173,7 @@ const MyEvents = () => {
 
                 {/* Action Buttons */}
                 <div className="flex gap-2 pt-4 border-t border-gray-100">
-                  <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors text-sm font-medium">
+                  <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium">
                     <FiEye size={16} />
                     View
                   </button>
