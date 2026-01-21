@@ -1,5 +1,6 @@
 import React, { useContext, useState } from 'react';
 import { MdOutlineEmojiEvents } from 'react-icons/md';
+import { FiEdit, FiZap } from 'react-icons/fi';
 import { toast, Toaster } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import AuthContext from '../../providers/AuthContext';
@@ -12,6 +13,7 @@ import LocationSection from './components/LocationSection';
 import ContactSection from './components/ContactSection';
 import VisibilitySection from './components/VisibilitySection';
 import AdditionalInfoSection from './components/AdditionalInfoSection';
+import BannerAnalyzer from './components/BannerAnalyzer';
 import { eventAddStyles } from './styles';
 import { TIMEZONES } from './constants';
 
@@ -19,6 +21,7 @@ const EventAdd = () => {
   const { user, userData } = useContext(AuthContext);
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showBannerAnalyzer, setShowBannerAnalyzer] = useState(false);
 
   const {
     formData,
@@ -44,6 +47,22 @@ const EventAdd = () => {
 
   // Get timezone offset from TIMEZONES array
   const timezoneOffset = TIMEZONES.find(tz => tz.value === formData.eventTimezone)?.offset || '+06:00';
+
+  const handleAIDataExtracted = (aiData) => {
+    // Merge AI extracted data with form data
+    setFormData(prev => ({
+      ...prev,
+      title: aiData.title || prev.title,
+      description: aiData.description || prev.description,
+      category: aiData.category || prev.category,
+      tags: aiData.tags && aiData.tags.length > 0 ? aiData.tags : prev.tags,
+      venueName: aiData.venue_name || prev.venueName,
+      venueAddress: aiData.venue_address || prev.venueAddress,
+      contactEmail: aiData.contact_email || prev.contactEmail,
+      contactPhone: aiData.contact_phone || prev.contactPhone,
+      entryFee: aiData.entry_fee || prev.entryFee,
+    }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -149,6 +168,13 @@ const EventAdd = () => {
     <div className="min-h-screen p-6 event-add-page">
       <Toaster position="top-right" />
 
+      {showBannerAnalyzer && (
+        <BannerAnalyzer
+          onDataExtracted={handleAIDataExtracted}
+          onClose={() => setShowBannerAnalyzer(false)}
+        />
+      )}
+
       <div className="max-w-5xl mx-auto">
         <div className="mb-6">
           <h1 className="text-4xl font-bold text-slate-800 mb-2">
@@ -156,6 +182,50 @@ const EventAdd = () => {
             Create New Event
           </h1>
           <p className="text-slate-600">Fill in the details below to create your event</p>
+        </div>
+
+        {/* Mode Selector */}
+        <div className="glass-card p-6 mb-6">
+          <h2 className="text-lg font-semibold text-slate-800 mb-4">Choose Creation Method</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <button
+              type="button"
+              onClick={() => setShowBannerAnalyzer(true)}
+              className="p-6 border-2 border-blue-300 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl hover:border-blue-500 hover:shadow-lg transition-all text-left group"
+            >
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg text-white group-hover:scale-110 transition-transform">
+                  <FiZap size={24} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 text-lg mb-1">AI-Assisted Creation</h3>
+                  <p className="text-slate-600 text-sm mb-2">
+                    Upload your event banner and let AI extract the details automatically
+                  </p>
+                  <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
+                    Powered by BLIP-2
+                  </span>
+                </div>
+              </div>
+            </button>
+
+            <div className="p-6 border-2 border-slate-300 bg-white rounded-xl text-left">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-slate-200 rounded-lg text-slate-600">
+                  <FiEdit size={24} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 text-lg mb-1">Manual Entry</h3>
+                  <p className="text-slate-600 text-sm mb-2">
+                    Fill out the form below manually with all event details
+                  </p>
+                  <span className="inline-block px-3 py-1 bg-slate-100 text-slate-600 text-xs font-semibold rounded-full">
+                    Traditional Method
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">

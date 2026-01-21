@@ -45,6 +45,10 @@ export const API_ENDPOINTS = {
     EVENT_BY_ID: (eventId) => `${API_BASE_URL}/api/events/${eventId}`,
     UPDATE_EVENT: (eventId) => `${API_BASE_URL}/api/events/${eventId}`,
     DELETE_EVENT: (eventId) => `${API_BASE_URL}/api/events/${eventId}`,
+    
+    // AI Banner Analysis
+    AI_ANALYZE_BANNER: `${API_BASE_URL}/api/ai/analyze-banner`,
+    AI_STATUS: `${API_BASE_URL}/api/ai/status`,
 };
 
 export default API_BASE_URL;

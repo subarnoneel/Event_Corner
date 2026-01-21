@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
+import aiRoutes from './routes/ai.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -981,6 +982,11 @@ app.get('/api/events', async (req, res) => {
   }
 });
 
+
+// ============================================================================
+// AI ROUTES
+// ============================================================================
+app.use('/api/ai', aiRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
