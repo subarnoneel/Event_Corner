@@ -1,0 +1,10 @@
+{
+    "mcpServers": {
+        "supabase": {
+            "command": "node",
+            "args": [
+                "d:/Study/IUT - 5/Event_Corner/mcp-entrypoint.js"
+            ]
+        }
+    }
+}

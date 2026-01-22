@@ -7,24 +7,42 @@ from PIL import Image, ImageEnhance, ImageFilter
 import torch
 # Transformers imported lazily in load_blip_model to speed up startup
 
-# Try to import pytesseract, but make it optional
+# Force UTF-8 encoding for stdout/stderr to handle emojis and special chars on Windows
+sys.stdout.reconfigure(encoding='utf-8')
+sys.stderr.reconfigure(encoding='utf-8')
+
+# Import EasyOCR
 try:
-    import pytesseract
-    # Set tesseract path for Windows
-    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-    TESSERACT_AVAILABLE = True
+    import easyocr
+    EASYOCR_AVAILABLE = True
 except ImportError:
-    TESSERACT_AVAILABLE = False
-    print("Warning: pytesseract not available, OCR disabled", file=sys.stderr)
+    EASYOCR_AVAILABLE = False
+    print("Warning: easyocr not available", file=sys.stderr)
 
 class BannerAnalyzer:
     def __init__(self):
-        """Initialize analyzer - BLIP loads lazily when needed"""
+        """Initialize analyzer - BLIP and EasyOCR load lazily when needed"""
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.processor = None
         self.model = None
         self.model_loaded = False
+        self.reader = None
+        self.reader_loaded = False
         
+    def load_easyocr(self):
+        """Load EasyOCR reader only when needed"""
+        if self.reader_loaded:
+            return
+            
+        print("🚀 Loading EasyOCR model (this may take a moment)...", file=sys.stderr)
+        # Initialize reader - this downloads models if needed
+        # gpu=True if CUDA is available, else False
+        use_gpu = torch.cuda.is_available()
+        # verbose=False prevents progress bars from crashing on Windows terminals with encoding issues
+        self.reader = easyocr.Reader(['en'], gpu=use_gpu, verbose=False)
+        self.reader_loaded = True
+        print(f"✅ EasyOCR loaded! (GPU: {use_gpu})", file=sys.stderr)
+
     def load_blip_model(self):
         """Load BLIP model only when needed"""
         if self.model_loaded:
@@ -61,24 +79,23 @@ class BannerAnalyzer:
         self.model_loaded = True
 
     def preprocess_image(self, image):
-        """Preprocess image for better OCR accuracy"""
+        """Preprocess image for better OCR accuracy - still useful for EasyOCR"""
         try:
             # Convert to grayscale
             image = image.convert('L')
             
             # Increase contrast
             enhancer = ImageEnhance.Contrast(image)
-            image = enhancer.enhance(2.0)
+            image = enhancer.enhance(1.5) # Reduced from 2.0 for EasyOCR
             
-            # Resize - scaling up helps with small text
-            # Calculate new size maintaining aspect ratio
-            width, height = image.size
-            new_width = width * 2
-            new_height = height * 2
-            image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
-            
-            # Apply slight sharpening
-            image = image.filter(ImageFilter.SHARPEN)
+            # Resize 
+            # EasyOCR is robust to size, but standardizing helps
+            # Let's limit max dimension to 2048 to avoid OOM on huge images
+            max_size = 2048
+            if max(image.size) > max_size:
+                ratio = max_size / max(image.size)
+                new_size = (int(image.size[0] * ratio), int(image.size[1] * ratio))
+                image = image.resize(new_size, Image.Resampling.LANCZOS)
             
             return image
         except Exception as e:
@@ -86,86 +103,43 @@ class BannerAnalyzer:
             return image
         
     def extract_text_ocr(self, image_path):
-        """Extract text using OCR with confidence scoring"""
-        if not TESSERACT_AVAILABLE:
-            print("OCR skipped: Tesseract not installed", file=sys.stderr)
+        """Extract text using EasyOCR with confidence scoring"""
+        if not EASYOCR_AVAILABLE:
+            print("OCR skipped: EasyOCR not installed", file=sys.stderr)
             return "", 0.0
             
         try:
-            image = Image.open(image_path)
+            self.load_easyocr()
             
-            # Preprocess image
-            processed_image = self.preprocess_image(image)
+            # EasyOCR reads directly from file path
+            # It handles its own preprocessing mostly, but we can pass our preprocessed image if we want.
+            # However, EasyOCR works best on raw RGB for color differentiation in some cases,
+            # but usually 'readtext' handles paths fine.
+            # Let's try direct path first as it's optimized.
             
-            # Get data including confidence
-            # image_to_data returns a dict with keys: 'level', 'page_num', 'block_num', 'par_num', 'line_num', 'word_num', 'left', 'top', 'width', 'height', 'conf', 'text'
-            data = pytesseract.image_to_data(processed_image, output_type=pytesseract.Output.DICT)
+            print(f"Reading text from {image_path}...", file=sys.stderr)
+            results = self.reader.readtext(image_path)
             
+            # results is a list of (bbox, text, prob)
             text_parts = []
             total_conf = 0
             count_conf = 0
             
-            num_boxes = len(data['text'])
-            for i in range(num_boxes):
-                # Check for valid confidence (non-negative) and actual text
-                if int(data['conf'][i]) > -1:
-                    text_content = data['text'][i].strip()
-                    if text_content:
-                        text_parts.append(text_content)
-                        total_conf += float(data['conf'][i])
-                        count_conf += 1
+            for (bbox, text, prob) in results:
+                # Filter low confidence trash
+                if prob > 0.3: 
+                    text_parts.append(text)
+                    total_conf += prob
+                    count_conf += 1
             
-            # Reconstruct text (simple join) - for parsing we often want lines preserved
-            # So let's do a simple full string extraction for parsing as well, but use 'data' for confidence
-            # Actually, let's stick to the simpler image_to_string for the full text to preserve layout better,
-            # and use data just for stats, OR use image_to_string completely if we trust it more.
-            # But let's verify if image_to_string on processed image is better.
-            
-            full_text = pytesseract.image_to_string(processed_image)
-            
-            avg_conf = (total_conf / count_conf) if count_conf > 0 else 0.0
+            full_text = "\n".join(text_parts)
+            avg_conf = (total_conf / count_conf * 100) if count_conf > 0 else 0.0
             
             return full_text, avg_conf
             
         except Exception as e:
             print(f"OCR Error: {str(e)}", file=sys.stderr)
             return "", 0.0
-    
-    def understand_image(self, image_path):
-        """Use BLIP to understand image context"""
-        # Load model if not already loaded
-        self.load_blip_model()
-        
-        try:
-            image = Image.open(image_path).convert('RGB')
-            
-            # Generate caption
-            inputs = self.processor(image, return_tensors="pt").to(self.device)
-            out = self.model.generate(**inputs, max_length=100)
-            caption = self.processor.decode(out[0], skip_special_tokens=True)
-            
-            # Ask specific questions about the image
-            questions = [
-                "What is the title of this event?",
-                "When is this event happening?",
-                "Where is this event taking place?",
-                "What type of event is this?"
-            ]
-            
-            answers = {}
-            for question in questions:
-                inputs = self.processor(image, question, return_tensors="pt").to(self.device)
-                out = self.model.generate(**inputs, max_length=50)
-                answer = self.processor.decode(out[0], skip_special_tokens=True)
-                answers[question] = answer
-            
-            return {
-                "caption": caption,
-                "qa": answers
-            }
-        except Exception as e:
-            print(f"BLIP Error: {str(e)}", file=sys.stderr)
-            return {"caption": "", "qa": {}}
     
     def parse_event_details(self, ocr_text, blip_data, ocr_confidence=0.0):
         """Parse event details from OCR text and BLIP understanding"""

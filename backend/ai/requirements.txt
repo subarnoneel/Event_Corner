@@ -3,3 +3,4 @@ torchvision>=0.15.0
 transformers>=4.30.0
 pillow>=9.5.0
 pytesseract>=0.3.10
+easyocr>=1.7.0
