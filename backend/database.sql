@@ -99,3 +99,43 @@ CREATE INDEX idx_user_roles_combined ON user_roles(user_id, role_id);
 -- Returns: JSON with user_id, email, username, role, and success status
 -- ============================================================================
 
+// GET EVENT DETAILS BY ID
+app.get("/api/events/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const { data, error } = await supabase
+      .from("events")
+      .select(`
+        id,
+        title,
+        description,
+        category,
+        tags,
+        additional_info,
+        view_count,
+        created_at,
+        updated_at
+      `)
+      .eq("id", id)
+      .single();
+
+    if (error || !data) {
+      return res.status(404).json({
+        success: false,
+        message: "Event not found"
+      });
+    }
+
+    res.json({
+      success: true,
+      event: data
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+});
