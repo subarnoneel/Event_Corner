@@ -29,15 +29,27 @@ except ImportError:
     EASYOCR_AVAILABLE = False
     print("Warning: easyocr not available", file=sys.stderr)
 
+# Import PaddleOCR
+try:
+    from paddleocr import PaddleOCR
+    PADDLEOCR_AVAILABLE = True
+except ImportError:
+    PADDLEOCR_AVAILABLE = False
+    print("Warning: paddleocr not available", file=sys.stderr)
+
 class BannerAnalyzer:
-    def __init__(self):
-        """Initialize analyzer - BLIP and EasyOCR load lazily when needed"""
+    def __init__(self, ocr_backend='easy'):
+        """Initialize analyzer
+        
+        Args:
+            ocr_backend: 'easy' or 'paddle' (default: 'easy')
+        """
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.processor = None
-        self.model = None
-        self.model_loaded = False
-        self.reader = None
+        self.reader = None  # EasyOCR
         self.reader_loaded = False
+        self.paddle_ocr = None  # PaddleOCR
+        self.paddle_loaded = False
+        self.ocr_backend = ocr_backend
         
     def load_easyocr(self):
         """Load EasyOCR reader only when needed"""
@@ -52,61 +64,20 @@ class BannerAnalyzer:
         self.reader = easyocr.Reader(['en'], gpu=use_gpu, verbose=False)
         self.reader_loaded = True
         print(f"✅ EasyOCR loaded! (GPU: {use_gpu})", file=sys.stderr)
-
-    def load_blip_model(self):
-        """Load BLIP model only when needed"""
-        if self.model_loaded:
+    
+    def load_paddleocr(self):
+        """Load PaddleOCR reader only when needed"""
+        if self.paddle_loaded:
             return
             
-        print("🚀 Loading BLIP model (first time will download ~500MB)...", file=sys.stderr)
-        
-        # Lazy import to avoid slow startup for OCR-only use
-        from transformers import BlipProcessor, BlipForConditionalGeneration
-        
-        print(f"✅ Using device: {self.device}", file=sys.stderr)
-        
-        # Load BLIP model (smaller, faster)
-        print("📥 Step 1/2: Downloading processor files...", file=sys.stderr)
-        self.processor = BlipProcessor.from_pretrained(
-            "Salesforce/blip-image-captioning-base",
-            resume_download=True,
-            force_download=False
+        print("🚀 Loading PaddleOCR model...", file=sys.stderr)
+        # Initialize PaddleOCR with minimal settings for faster loading
+        self.paddle_ocr = PaddleOCR(
+            use_textline_orientation=True,
+            lang='en'
         )
-        print("✅ Processor loaded!", file=sys.stderr)
-        
-        print("📥 Step 2/2: Downloading main model (~400MB)...", file=sys.stderr)
-        print("    This may take 2-5 minutes depending on your internet speed.", file=sys.stderr)
-        self.model = BlipForConditionalGeneration.from_pretrained(
-            "Salesforce/blip-image-captioning-base",
-            resume_download=True,
-            force_download=False
-        )
-        print("✅ Model downloaded!", file=sys.stderr)
-        
-        print("🔄 Moving model to GPU...", file=sys.stderr)
-        self.model.to(self.device)
-        print("✅ Ready to analyze! Next analyses will be instant.", file=sys.stderr)
-        self.model_loaded = True
-
-    def load_spacy_model(self):
-        """Load SpaCy model only when needed"""
-        if hasattr(self, 'nlp') and self.nlp:
-            return
-
-        print("🚀 Loading SpaCy NLP model...", file=sys.stderr)
-        try:
-            import spacy
-            try:
-                self.nlp = spacy.load("en_core_web_sm")
-            except OSError:
-                print("📥 Downloading SpaCy model 'en_core_web_sm'...", file=sys.stderr)
-                from spacy.cli import download
-                download("en_core_web_sm")
-                self.nlp = spacy.load("en_core_web_sm")
-            print("✅ SpaCy loaded!", file=sys.stderr)
-        except Exception as e:
-            print(f"SpaCy Error: {str(e)}", file=sys.stderr)
-            self.nlp = None
+        self.paddle_loaded = True
+        print(f"✅ PaddleOCR loaded!", file=sys.stderr)
 
     def preprocess_image_advanced(self, image_path):
         """Advanced multi-strategy preprocessing for optimal OCR"""
@@ -321,232 +292,59 @@ class BannerAnalyzer:
             traceback.print_exc(file=sys.stderr)
             return "", 0.0
     
-    def parse_event_details(self, ocr_text, blip_data, ocr_confidence=0.0):
-        """Parse event details using SpaCy NER and Regex fallback"""
-        # Load SpaCy if possible
-        self.load_spacy_model()
-        doc = self.nlp(ocr_text) if hasattr(self, 'nlp') and self.nlp else None
-        
-        event_data = {
-            "title": "",
-            "description": "",
-            "category": "",
-            "venue_name": "",
-            "venue_address": "",
-            "contact_email": "",
-            "contact_phone": "",
-            "entry_fee": "",
-            "tags": [],
-            "confidence": "medium"
-        }
-        
-        lines = [line.strip() for line in ocr_text.split('\n') if line.strip()]
-        
-        # --- 0. Noise Reduction ---
-        # Remove very short lines that assume to be OCR noise (e.g. "I", "::", "..")
-        # But keep digits (could be dates/prices)
-        clean_lines = []
-        for line in lines:
-            if len(line) > 2 or any(c.isdigit() for c in line):
-                clean_lines.append(line)
-        lines = clean_lines
-        
-        # --- 1. Title Extraction ---
-        # Heuristic: Often the first line, OR the largest PROPN chunk in parsing
-        if lines:
-            event_data["title"] = lines[0] # Default fallback
+    def extract_text_paddle(self, image_path):
+        """Extract text using PaddleOCR"""
+        if not PADDLEOCR_AVAILABLE:
+            print("PaddleOCR skipped: not installed", file=sys.stderr)
+            return "", 0.0
             
-        # Refined Title from SpaCy: Look for "EVENT" entities or just use the first line mostly
-        # BLIP is actually better for title, but we disabled it.
-        # If we have BLIP caption, use it if OCR failed
-        if not event_data["title"] and blip_data.get("caption"):
-            event_data["title"] = blip_data["caption"][:100]
-
-        # --- 2. Entities Extraction (Date, Time, Venue, Org, Money) ---
-        spacy_dates = []
-        spacy_times = []
-        spacy_locs = []
-        spacy_orgs = []
-        spacy_money = []
-        
-        if doc:
-            print("="*50, file=sys.stderr)
-            print("SpaCy ENTITIES Found:", file=sys.stderr)
-            for ent in doc.ents:
-                if ent.label_ in ["DATE", "TIME", "GPE", "FAC", "LOC", "ORG", "MONEY"]:
-                    print(f"  - {ent.text} [{ent.label_}]", file=sys.stderr)
-            print("="*50, file=sys.stderr)
-
-            for ent in doc.ents:
-                if ent.label_ == "DATE":
-                    spacy_dates.append(ent.text)
-                elif ent.label_ == "TIME":
-                    spacy_times.append(ent.text)
-                elif ent.label_ in ["GPE", "FAC", "LOC"]: # Location-like
-                    spacy_locs.append(ent.text)
-                elif ent.label_ == "ORG":
-                    spacy_orgs.append(ent.text)
-                elif ent.label_ == "MONEY":
-                    spacy_money.append(ent.text)
-
-        # --- 3. Date & Time ---
-        # Fallback to regex if SpaCy fails, or combine them
-        # Regex Date Patterns
-        date_patterns = [
-            r'\d{1,2}[/-]\d{1,2}[/-]\d{2,4}',  # DD/MM/YYYY
-            r'\d{4}[/-]\d{1,2}[/-]\d{1,2}',    # YYYY-MM-DD
-            r'(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2},? \d{4}',
-            r'\d{1,2} (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{4}'
-        ]
-        
-        regex_dates = []
-        for pattern in date_patterns:
-            regex_dates.extend(re.findall(pattern, ocr_text, re.IGNORECASE))
+        try:
+            self.load_paddleocr()
             
-        combined_dates = list(set(spacy_dates + regex_dates))
-        
-        # Regex Time Patterns
-        time_patterns = [
-            r'\d{1,2}:\d{2}\s*(?:AM|PM|am|pm)?',
-            r'\d{1,2}\s*(?:AM|PM|am|pm)'
-        ]
-        regex_times = []
-        for pattern in time_patterns:
-            regex_times.extend(re.findall(pattern, ocr_text, re.IGNORECASE))
+            print(f"📸 Running PaddleOCR...", file=sys.stderr)
+            results = self.paddle_ocr.ocr(image_path)
             
-        combined_times = list(set(spacy_times + regex_times))
-
-        # Build description
-        desc_parts = []
-        if combined_dates:
-            desc_parts.append(f"Date: {', '.join(combined_dates[:2])}")
-        if combined_times:
-            desc_parts.append(f"Time: {', '.join(combined_times[:2])}")
-        
-        if desc_parts:
-            event_data["description"] = " | ".join(desc_parts)
-
-        # --- 4. Venue ---
-        venue_found = False
-        
-        # 4a. Explicit Keyword Prefix (Best Confidence)
-        venue_prefix_patterns = [
-            r'(?:venue|location|place|where|address)\s*[:\-]?(.*)',
-            r'\bat\b\s*(.*)'
-        ]
-        
-        for i, line in enumerate(lines):
-            for pattern in venue_prefix_patterns:
-                match = re.search(pattern, line, re.IGNORECASE)
-                if match:
-                    content = match.group(1).strip()
-                    # Filter noise: content must be at least 3 chars
-                    if len(content) > 3: 
-                        event_data["venue_name"] = content
-                        venue_found = True
-                        if i + 1 < len(lines):
-                            event_data["venue_address"] = lines[i + 1]
-                        break
-            if venue_found: break
-
-        # 4b. Known Venue Database (Fuzzy-ish Match)
-        # If we didn't find "Venue:", look for lines containing known major venues
-        if not venue_found:
-            known_venues = [
-                "bashundhara", "iccb", "convention", "center", "centre", "hall", 
-                "auditorium", "stadium", "banquet", "club", "resort", "hotel", 
-                "university", "campus", "buet", "du", "iut", "nsu", "brac", 
-                "raowa", "senakunjo"
-            ]
+            if not results or len(results) == 0:
+                return "", 0.0
             
-            for i, line in enumerate(lines):
-                if i == 0: continue # Skip title
-                
-                line_lower = line.lower()
-                # If line matches a known venue keyword
-                if any(v in line_lower for v in known_venues):
-                    # And isn't just a date or simple word
-                    if len(line) > 5 and not any(c.isdigit() for c in line):
-                        event_data["venue_name"] = line
-                        venue_found = True
-                        if i + 1 < len(lines):
-                            event_data["venue_address"] = lines[i + 1]
-                        break
-        
-        # 4c. SpaCy Fallback
-        if not venue_found and spacy_locs:
-            # Filter out country names usually (e.g. Bangladesh) if we have city
-            valid_locs = [loc for loc in spacy_locs if loc.lower() not in ["bangladesh", "dhaka"]]
-            if valid_locs:
-                event_data["venue_name"] = valid_locs[0]
-            elif spacy_locs:
-                event_data["venue_name"] = spacy_locs[0]
-
-        # --- 5. Contact (Email/Phone) - Regex is king here ---
-        email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
-        emails = re.findall(email_pattern, ocr_text)
-        if emails:
-            event_data["contact_email"] = emails[0]
-        
-        phone_patterns = [
-            r'\+?\d{1,3}[-.\s]?\(?\d{3}\)?[-.\s]?\d{3,4}[-.\s]?\d{4}',
-            r'01\d{9}'  # BD Mobile
-        ]
-        for pattern in phone_patterns:
-            phones = re.findall(pattern, ocr_text)
-            if phones:
-                event_data["contact_phone"] = phones[0]
-                break
-
-        # --- 6. Entry Fee ---
-        # Use SpaCy MONEY
-        if spacy_money:
-            event_data["entry_fee"] = spacy_money[0]
-        else:
-            # Fallback regex
-            fee_pattern = r'(?:fee|price|cost|entry)[:\s]*(?:BDT|Tk|৳)?\s*(\d+)'
-            fees = re.findall(fee_pattern, ocr_text, re.IGNORECASE)
-            if fees:
-                event_data["entry_fee"] = fees[0]
-            elif re.search(r'\bfree\b', ocr_text, re.IGNORECASE):
-                event_data["entry_fee"] = "0"
-        
-        # --- 7. Category & Tags ---
-        category_keywords = {
-            "workshop": ["workshop", "training", "seminar", "tutorial"],
-            "seminar": ["seminar", "talk", "lecture", "presentation"],
-            "competition": ["competition", "contest", "hackathon", "challenge"],
-            "conference": ["conference", "summit", "symposium"],
-            "cultural": ["cultural", "festival", "concert", "performance"],
-            "sports": ["sports", "tournament", "match", "game"],
-            "social": ["social", "meetup", "gathering", "networking"],
-            "academic": ["academic", "research", "colloquium"]
-        }
-        
-        text_lower = ocr_text.lower()
-        for category, keywords in category_keywords.items():
-            if any(keyword in text_lower for keyword in keywords):
-                event_data["category"] = category
-                event_data["tags"].append(category)
-                break
-                
-        # --- 8. Confidence ---
-        filled_fields = sum(1 for v in event_data.values() if v and v != [] and v != "medium")
-        total_fields = len(event_data) - 1
-        completeness_score = (filled_fields / total_fields) * 100
-        ocr_score = ocr_confidence
-        
-        final_score = (completeness_score * 0.5) + (ocr_score * 0.5)
-        
-        if final_score > 70:
-            event_data["confidence"] = "high"
-        elif final_score > 40:
-            event_data["confidence"] = "medium"
-        else:
-            event_data["confidence"] = "low"
-        
-        return event_data
-
+            ocr_result = results[0]  # OCRResult dict
+            
+            # Extract texts and scores from OCRResult
+            if 'rec_texts' not in ocr_result:
+                print("⚠️  No rec_texts in PaddleOCR result", file=sys.stderr)
+                return "", 0.0
+            
+            texts = ocr_result['rec_texts']
+            scores = ocr_result.get('rec_scores', [])
+            
+            # Filter by confidence and combine
+            text_parts = []
+            total_conf = 0
+            count_conf = 0
+            
+            for i, text in enumerate(texts):
+                conf = scores[i] if i < len(scores) else 0.5
+                if conf > 0.4:  # Confidence threshold
+                    text_parts.append(text)
+                    total_conf += conf
+                    count_conf += 1
+            
+            full_text = "\\n".join(text_parts)
+            avg_conf = (total_conf / count_conf * 100) if count_conf > 0 else 0.0
+            
+            # Clean the text
+            cleaned_text = self.clean_ocr_text(full_text)
+            
+            print(f"✅ PaddleOCR: {len(text_parts)} text blocks, confidence: {avg_conf:.1f}%", file=sys.stderr)
+            
+            return cleaned_text, avg_conf
+            
+        except Exception as e:
+            print(f"PaddleOCR Error: {str(e)}", file=sys.stderr)
+            import traceback
+            traceback.print_exc(file=sys.stderr)
+            return "", 0.0
+    
     def validate_and_normalize_event_data(self, event_data):
         """Validate and normalize event data from LLaVA"""
         # Ensure all required fields exist
@@ -606,15 +404,18 @@ class BannerAnalyzer:
                 print(f"⚠️ Cannot connect to Ollama. Is it running? Error: {conn_error}", file=sys.stderr)
                 return None
             
-            # STEP 1: Use EasyOCR to extract text (precise, no hallucination)
-            print("📝 Step 1: Extracting text with EasyOCR...", file=sys.stderr)
-            ocr_text, ocr_conf = self.extract_text_ocr(image_path)
+            # STEP 1: Use selected OCR backend to extract text
+            print(f"📝 Step 1: Extracting text with {self.ocr_backend.upper()}OCR...", file=sys.stderr)
+            if self.ocr_backend == 'paddle':
+                ocr_text, ocr_conf = self.extract_text_paddle(image_path)
+            else:
+                ocr_text, ocr_conf = self.extract_text_ocr(image_path)
             
             if not ocr_text or len(ocr_text.strip()) < 10:
-                print("⚠️ EasyOCR extracted very little text. Cannot proceed.", file=sys.stderr)
+                print(f"⚠️ {self.ocr_backend.upper()}OCR extracted very little text. Cannot proceed.", file=sys.stderr)
                 return None
             
-            print(f"✅ EasyOCR extracted {len(ocr_text)} characters (confidence: {ocr_conf:.1f}%)", file=sys.stderr)
+            print(f"✅ {self.ocr_backend.upper()}OCR extracted {len(ocr_text)} characters (confidence: {ocr_conf:.1f}%)", file=sys.stderr)
             print(f"📄 OCR Text preview:\n{ocr_text[:300]}...\n", file=sys.stderr)
             
             # STEP 2: Use text-only Llama to structure the OCR text
@@ -736,63 +537,29 @@ Return ONLY valid JSON."""
 
 
     def analyze(self, image_path):
-        """Main analysis function"""
+        """Main analysis function - uses hybrid OCR + Llama approach"""
         print(f"Analyzing image: {image_path}", file=sys.stderr)
         
-        # --- STRATEGY 1: Try Hybrid OCR + Llama Approach ---
+        # Use Hybrid OCR + Llama Approach
         hybrid_result = self.analyze_with_ollama(image_path)
         if hybrid_result:
-             print("✨ Used hybrid EasyOCR + Llama for analysis", file=sys.stderr)
+             print(f"✨ Used {self.ocr_backend.upper()}OCR + Llama for analysis", file=sys.stderr)
              return {
                 "success": True,
                 "event_data": hybrid_result,
-                "debug_info": {"method": "easyocr_llama_hybrid"}
+                "debug_info": {
+                    "method": f"{self.ocr_backend}_llama_hybrid",
+                    "ocr_backend": self.ocr_backend
+                }
              }
         
-        # --- STRATEGY 2: Fallback to EasyOCR + SpaCy ---
-        print("⚠️ LLaVA failed or not available. Falling back to OCR...", file=sys.stderr)
-        
-        # Extract text with OCR
-        print("Running OCR...", file=sys.stderr)
-        ocr_text, ocr_conf = self.extract_text_ocr(image_path)
-        print(f"✅ OCR Complete! Extracted {len(ocr_text)} characters. Confidence: {ocr_conf:.2f}%", file=sys.stderr)
-        print("="*50, file=sys.stderr)
-        print("OCR OUTPUT:", file=sys.stderr)
-        print(ocr_text[:1000] if ocr_text else "No text found", file=sys.stderr)
-        print("="*50, file=sys.stderr)
-        
-        # Understand image with BLIP (COMMENTED OUT FOR NOW - OCR ONLY)
-        # print("Running BLIP analysis...", file=sys.stderr)
-        # blip_data = self.understand_image(image_path)
-        # print("✅ BLIP Complete!", file=sys.stderr)
-        # print("="*50, file=sys.stderr)
-        # print("BLIP CAPTION:", file=sys.stderr)
-        # print(blip_data.get("caption", "N/A"), file=sys.stderr)
-        # print("="*50, file=sys.stderr)
-        
-        # Use empty BLIP data for now (OCR only mode)
-        blip_data = {"caption": "", "qa": {}}
-        
-        # Parse event details
-        print("Parsing event details...", file=sys.stderr)
-        event_data = self.parse_event_details(ocr_text, blip_data, ocr_conf)
-        
-        # Add raw data for debugging
-        result = {
-            "success": True,
-            "event_data": event_data,
-            "raw_ocr_text": ocr_text[:1000],  # First 1000 chars
-            "blip_caption": blip_data.get("caption", ""),
-            "blip_qa": blip_data.get("qa", {}),
-            "debug_info": {
-                "ocr_length": len(ocr_text),
-                "ocr_confidence": ocr_conf,
-                "device_used": self.device,
-                "easyocr_available": EASYOCR_AVAILABLE
-            }
+        # If hybrid failed, return error
+        print("⚠️ OCR + Llama analysis failed", file=sys.stderr)
+        return {
+            "success": False,
+            "error": "Failed to analyze banner. Ollama might not be running or OCR extracted no text.",
+            "debug_info": {"method": "hybrid_failed"}
         }
-        
-        return result
 
 def main():
     if len(sys.argv) != 2:
@@ -806,7 +573,7 @@ def main():
         sys.exit(1)
     
     try:
-        analyzer = BannerAnalyzer()
+        analyzer = BannerAnalyzer(ocr_backend='paddle')  # Use PaddleOCR (93.8% accuracy)
         result = analyzer.analyze(image_path)
         print(json.dumps(result))
     except Exception as e:
