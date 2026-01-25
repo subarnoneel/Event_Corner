@@ -3,6 +3,7 @@ import json
 import os
 from datetime import datetime
 import re
+import time  # Added for timing
 import numpy as np
 from PIL import Image, ImageEnhance, ImageFilter
 import torch
@@ -406,20 +407,24 @@ class BannerAnalyzer:
             
             # STEP 1: Use selected OCR backend to extract text
             print(f"📝 Step 1: Extracting text with {self.ocr_backend.upper()}OCR...", file=sys.stderr)
+            start_time = time.time()
             if self.ocr_backend == 'paddle':
                 ocr_text, ocr_conf = self.extract_text_paddle(image_path)
             else:
                 ocr_text, ocr_conf = self.extract_text_ocr(image_path)
+            ocr_time = time.time() - start_time
             
             if not ocr_text or len(ocr_text.strip()) < 10:
                 print(f"⚠️ {self.ocr_backend.upper()}OCR extracted very little text. Cannot proceed.", file=sys.stderr)
                 return None
             
             print(f"✅ {self.ocr_backend.upper()}OCR extracted {len(ocr_text)} characters (confidence: {ocr_conf:.1f}%)", file=sys.stderr)
+            print(f"⏱️  OCR Time: {ocr_time:.2f}s", file=sys.stderr)
             print(f"📄 OCR Text preview:\n{ocr_text[:300]}...\n", file=sys.stderr)
             
             # STEP 2: Use text-only Llama to structure the OCR text
             print("🔍 Step 2: Structuring text with Llama...", file=sys.stderr)
+            llama_start = time.time()
             
             # Auto-detect available model - prefer text-only Llama, but can use LLaVA for structuring
             models = available_models.get('models', [])
@@ -573,7 +578,7 @@ def main():
         sys.exit(1)
     
     try:
-        analyzer = BannerAnalyzer(ocr_backend='paddle')  # Use PaddleOCR (93.8% accuracy)
+        analyzer = BannerAnalyzer(ocr_backend='easy')  # Use PaddleOCR (93.8% accuracy)
         result = analyzer.analyze(image_path)
         print(json.dumps(result))
     except Exception as e:

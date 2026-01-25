@@ -1,7 +1,6 @@
 import express from 'express';
 import multer from 'multer';
 import path from 'path';
-import { spawn } from 'child_process';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -34,7 +33,7 @@ const upload = multer({
     const allowedTypes = /jpeg|jpg|png|gif|webp/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
-    
+
     if (mimetype && extname) {
       return cb(null, true);
     } else {
@@ -43,7 +42,7 @@ const upload = multer({
   }
 });
 
-// POST /api/ai/analyze-banner
+// POST /api/ai/analyze-banner - Send to FastAPI server
 router.post('/analyze-banner', upload.single('banner'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ success: false, error: 'No banner image uploaded' });
@@ -53,104 +52,75 @@ router.post('/analyze-banner', upload.single('banner'), async (req, res) => {
   console.log('Analyzing banner:', imagePath);
 
   try {
-    // Path to Python script
-    const pythonScript = path.join(__dirname, '../ai/banner_analyzer.py');
-    
-    // Spawn Python process
-    const pythonProcess = spawn('python', [pythonScript, imagePath]);
-    
-    let outputData = '';
-    let errorData = '';
+    // Import axios and FormData dynamically (ESM)
+    const axios = (await import('axios')).default;
+    const FormData = (await import('form-data')).default;
 
-    pythonProcess.stdout.on('data', (data) => {
-      outputData += data.toString();
+    // Send to FastAPI server
+    const formData = new FormData();
+    formData.append('file', fs.createReadStream(imagePath));
+
+    console.log('📤 Sending to FastAPI server (port 5001)...');
+
+    const response = await axios.post('http://localhost:5001/analyze', formData, {
+      headers: formData.getHeaders(),
+      timeout: 120000  // 120s timeout (first load takes longer)
     });
 
-    pythonProcess.stderr.on('data', (data) => {
-      errorData += data.toString();
-      console.log('Python stderr:', data.toString());
+    console.log('✅ Analysis complete!');
+
+    // Clean up uploaded file after processing
+    fs.unlink(imagePath, (err) => {
+      if (err) console.error('Error deleting temp file:', err);
     });
 
-    pythonProcess.on('close', (code) => {
-      // Clean up uploaded file after processing
-      fs.unlink(imagePath, (err) => {
-        if (err) console.error('Error deleting temp file:', err);
-      });
-
-      if (code !== 0) {
-        console.error('Python process error:', errorData);
-        return res.status(500).json({
-          success: false,
-          error: 'Banner analysis failed',
-          details: errorData
-        });
-      }
-
-      try {
-        const result = JSON.parse(outputData);
-        res.json(result);
-      } catch (parseError) {
-        console.error('JSON parse error:', parseError);
-        console.error('Raw output:', outputData);
-        res.status(500).json({
-          success: false,
-          error: 'Failed to parse analysis results',
-          raw_output: outputData
-        });
-      }
-    });
+    res.json(response.data);
 
   } catch (error) {
-    console.error('Analysis error:', error);
-    
+    console.error('Analysis error:', error.message);
+
     // Clean up file on error
     if (fs.existsSync(imagePath)) {
       fs.unlink(imagePath, (err) => {
         if (err) console.error('Error deleting temp file:', err);
       });
     }
-    
+
+    // Check if it's a connection error
+    if (error.code === 'ECONNREFUSED') {
+      return res.status(503).json({
+        success: false,
+        error: 'AI server not running. Please start: python ai/ai_server.py'
+      });
+    }
+
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Banner analysis failed',
+      details: error.message
     });
   }
 });
 
 // GET /api/ai/status - Check if AI service is available
-router.get('/status', (req, res) => {
-  const pythonScript = path.join(__dirname, '../ai/banner_analyzer.py');
-  
-  if (!fs.existsSync(pythonScript)) {
-    return res.json({
-      available: false,
-      error: 'Python script not found'
+router.get('/status', async (req, res) => {
+  try {
+    const axios = (await import('axios')).default;
+
+    // Check FastAPI server health
+    const response = await axios.get('http://localhost:5001/health', { timeout: 5000 });
+
+    res.json({
+      available: true,
+      message: 'AI FastAPI server is running',
+      details: response.data
     });
-  }
-
-  // Try to run a simple Python check
-  const pythonProcess = spawn('python', ['--version']);
-  
-  pythonProcess.on('close', (code) => {
-    if (code === 0) {
-      res.json({
-        available: true,
-        message: 'AI analysis service is ready'
-      });
-    } else {
-      res.json({
-        available: false,
-        error: 'Python not available'
-      });
-    }
-  });
-
-  pythonProcess.on('error', (error) => {
+  } catch (error) {
     res.json({
       available: false,
-      error: 'Python not found: ' + error.message
+      error: 'FastAPI server not running. Run: python ai/ai_server.py'
     });
-  });
+  }
 });
 
 export default router;
