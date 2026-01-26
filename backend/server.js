@@ -892,10 +892,10 @@ app.post('/api/events', async (req, res) => {
   }
 });
 
-/**
- * GET /api/events/:eventId
- * Get event details by ID
- */
+// /**
+//  * GET /api/events/:eventId
+//  * Get event details by ID
+//  */
 app.get('/api/events/:eventId', async (req, res) => {
   try {
     const { eventId } = req.params;
@@ -1004,42 +1004,42 @@ app.listen(PORT, () => {
 //////////
 /*FOR EVENT DETAIL PAGE EVENT FETCHING  */
 // GET EVENT DETAILS BY ID
-app.get("/api/events/:id", async (req, res) => {
-  const { id } = req.params;
+// app.get("/api/events/:id", async (req, res) => {
+//   const { id } = req.params;
 
-  try {
-    const { data, error } = await supabase
-      .from("events")
-      .select(`
-        id,
-        title,
-        description,
-        category,
-        tags,
-        additional_info,
-        view_count,
-        created_at,
-        updated_at
-      `)
-      .eq("id", id)
-      .single();
+//   try {
+//     const { data, error } = await supabase
+//       .from("events")
+//       .select(`
+//         id,
+//         title,
+//         description,
+//         category,
+//         tags,
+//         additional_info,
+//         view_count,
+//         created_at,
+//         updated_at
+//       `)
+//       .eq("id", id)
+//       .single();
 
-    if (error || !data) {
-      return res.status(404).json({
-        success: false,
-        message: "Event not found"
-      });
-    }
+//     if (error || !data) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Event not found"
+//       });
+//     }
 
-    res.json({
-      success: true,
-      event: data
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error"
-    });
-  }
-});
+//     res.json({
+//       success: true,
+//       event: data
+//     });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({
+//       success: false,
+//       message: "Internal server error"
+//     });
+//   }
+// });

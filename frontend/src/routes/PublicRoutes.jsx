@@ -24,6 +24,7 @@ import ParticipantProfile from "../pages/dashboard/participant/ParticipantProfil
 import MainLayout from "../components/MainLayout";
 import ProtectedRoute from "./PrivateRoutes";
 import EventAdd from "../pages/EventAdd";
+import EventDetail from "../pages/events/EventDetail";
 
 
 const PublicRoutes = createBrowserRouter([
@@ -148,6 +149,10 @@ const PublicRoutes = createBrowserRouter([
             {
                 path: "/events/create",
                 element: <ProtectedRoute allowedRoles={['organizer', 'institution']}><EventAdd /></ProtectedRoute>,
+            },
+            {
+                path: "/event/:id",
+                element: <EventDetail/>
             },
         ],
     },
