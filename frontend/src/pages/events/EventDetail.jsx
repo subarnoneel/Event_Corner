@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { API_ENDPOINTS } from "../../config/api";
 import ReactMarkdown from 'react-markdown';
 import { 
@@ -17,7 +17,9 @@ import {
   FiVideo,
   FiMap,
   FiAlertCircle,
-  FiCheckCircle
+  FiCheckCircle,
+  FiChevronLeft,
+  FiChevronRight
 } from "react-icons/fi";
 
 const EventDetail = () => {
@@ -27,6 +29,8 @@ const EventDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [calendarView, setCalendarView] = useState('month');
+  const [currentDate, setCurrentDate] = useState(new Date());
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -48,6 +52,53 @@ const EventDetail = () => {
 
     fetchEvent();
   }, [id]);
+
+  // Calendar Helper Functions
+  const getDaysInMonth = (date) => {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  };
+
+  const getFirstDayOfMonth = (date) => {
+    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+  };
+
+  // Generate calendar days
+  const calendarDays = useMemo(() => {
+    const daysInMonth = getDaysInMonth(currentDate);
+    const firstDay = getFirstDayOfMonth(currentDate);
+    const days = [];
+    
+    // Previous month days
+    const prevMonthDays = getDaysInMonth(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+    for (let i = firstDay - 1; i >= 0; i--) {
+      days.push({
+        day: prevMonthDays - i,
+        isCurrentMonth: false,
+        date: new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, prevMonthDays - i)
+      });
+    }
+    
+    // Current month days
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push({
+        day: i,
+        isCurrentMonth: true,
+        date: new Date(currentDate.getFullYear(), currentDate.getMonth(), i)
+      });
+    }
+    
+    // Next month days to fill the grid
+    const remainingDays = 42 - days.length; // 6 weeks * 7 days
+    for (let i = 1; i <= remainingDays; i++) {
+      days.push({
+        day: i,
+        isCurrentMonth: false,
+        date: new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, i)
+      });
+    }
+    
+    return days;
+  }, [currentDate]);
 
   if (loading) {
     return (
@@ -127,6 +178,40 @@ const EventDetail = () => {
     } else if (event.venue_address) {
       window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.venue_address)}`, '_blank');
     }
+  };
+
+  const previousMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  };
+
+  const nextMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  };
+
+  const goToToday = () => {
+    setCurrentDate(new Date());
+  };
+
+  const formatMonthYear = (date) => {
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  };
+
+  // Get timeslots for a specific date
+  const getTimeslotsForDate = (date) => {
+    if (!event?.timeslots) return [];
+    
+    return event.timeslots.filter(slot => {
+      const slotStart = new Date(slot.start);
+      const slotEnd = new Date(slot.end);
+      const checkDate = new Date(date);
+      checkDate.setHours(0, 0, 0, 0);
+      const nextDate = new Date(checkDate);
+      nextDate.setDate(nextDate.getDate() + 1);
+      
+      return (slotStart >= checkDate && slotStart < nextDate) ||
+             (slotEnd > checkDate && slotEnd <= nextDate) ||
+             (slotStart < checkDate && slotEnd > nextDate);
+    });
   };
 
   const allImages = [
@@ -293,33 +378,167 @@ const EventDetail = () => {
             {event.timeslots && event.timeslots.length > 0 && (
               <div className="bg-white rounded-xl shadow-md p-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Event Schedule</h2>
-                <div className="space-y-4">
-                  {event.timeslots.map((slot, idx) => (
-                    <div 
-                      key={slot.id || idx} 
-                      className="border-l-4 pl-6 py-4 rounded-r-lg hover:bg-gray-50 transition"
-                      style={{ borderColor: slot.color || '#3b82f6' }}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-bold text-gray-900">{slot.title}</h3>
-                          {slot.description && (
-                            <p className="text-gray-600 mt-1">{slot.description}</p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4 mt-3 text-sm">
-                        <div className="flex items-center gap-2 text-gray-700">
-                          <FiCalendar size={16} />
-                          <span>{formatDate(slot.start)}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-gray-700">
-                          <FiClock size={16} />
-                          <span>{formatTime(slot.start)} - {formatTime(slot.end)}</span>
-                        </div>
-                      </div>
+                
+                {/* Calendar Navigation */}
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={previousMonth}
+                        className="p-2 hover:bg-gray-100 rounded-lg transition"
+                      >
+                        <FiChevronLeft size={20} />
+                      </button>
+                      <button
+                        onClick={nextMonth}
+                        className="p-2 hover:bg-gray-100 rounded-lg transition"
+                      >
+                        <FiChevronRight size={20} />
+                      </button>
+                      <button
+                        onClick={goToToday}
+                        className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition text-sm font-medium"
+                      >
+                        today
+                      </button>
                     </div>
-                  ))}
+                    
+                    <h3 className="text-xl font-bold text-gray-900">
+                      {formatMonthYear(currentDate)}
+                    </h3>
+                    
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setCalendarView('month')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                          calendarView === 'month' 
+                            ? 'bg-gray-900 text-white' 
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        month
+                      </button>
+                      <button
+                        onClick={() => setCalendarView('week')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                          calendarView === 'week' 
+                            ? 'bg-gray-900 text-white' 
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        week
+                      </button>
+                      <button
+                        onClick={() => setCalendarView('day')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                          calendarView === 'day' 
+                            ? 'bg-gray-900 text-white' 
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        day
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Calendar Grid */}
+                  <div className="border rounded-lg overflow-hidden">
+                    {/* Calendar Header */}
+                    <div className="grid grid-cols-7 bg-gray-50 border-b">
+                      {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                        <div key={day} className="py-3 text-center font-semibold text-gray-700 text-sm">
+                          {day}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Calendar Body */}
+                    <div className="grid grid-cols-7">
+                      {calendarDays.map((dayInfo, idx) => {
+                        const timeslots = getTimeslotsForDate(dayInfo.date);
+                        const isToday = new Date().toDateString() === dayInfo.date.toDateString();
+                        
+                        return (
+                          <div
+                            key={idx}
+                            className={`min-h-[100px] border-b border-r p-2 ${
+                              !dayInfo.isCurrentMonth ? 'bg-gray-50 text-gray-400' : 'bg-white'
+                            } ${isToday ? 'bg-blue-50' : ''}`}
+                          >
+                            <div className={`text-sm font-medium mb-1 ${
+                              isToday ? 'text-blue-600 font-bold' : ''
+                            }`}>
+                              {dayInfo.day}
+                            </div>
+                            
+                            {/* Timeslots for this day */}
+                            <div className="space-y-1">
+                              {timeslots.map((slot) => {
+                                const startTime = new Date(slot.start);
+                                const formattedTime = startTime.toLocaleTimeString('en-US', { 
+                                  hour: 'numeric', 
+                                  minute: '2-digit',
+                                  hour12: true 
+                                });
+                                
+                                return (
+                                  <div
+                                    key={slot.id}
+                                    className="text-xs px-2 py-1 rounded text-white font-medium truncate cursor-pointer hover:opacity-90 transition"
+                                    style={{ backgroundColor: slot.color || '#3b82f6' }}
+                                    title={`${slot.title} - ${formattedTime}`}
+                                  >
+                                    {slot.title}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Added Timeslots List */}
+                <div className="mt-8">
+                  <div className="flex items-center gap-2 mb-4">
+                    <FiClock className="text-blue-600" size={20} />
+                    <h3 className="text-lg font-bold text-gray-900">
+                      Added Timeslots ({event.timeslots.length})
+                    </h3>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {event.timeslots.map((slot, idx) => {
+                      const startDate = new Date(slot.start);
+                      const endDate = new Date(slot.end);
+                      const dateRange = `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}, ${startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })} → ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}, ${endDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
+                      
+                      return (
+                        <div 
+                          key={slot.id || idx} 
+                          className="border rounded-lg p-4 hover:shadow-md transition"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <div 
+                                  className="w-3 h-3 rounded-full"
+                                  style={{ backgroundColor: slot.color || '#3b82f6' }}
+                                ></div>
+                                <h4 className="font-bold text-gray-900">{slot.title}</h4>
+                              </div>
+                              <p className="text-sm text-gray-600">{dateRange}</p>
+                              {slot.description && (
+                                <p className="text-sm text-gray-500 mt-2">{slot.description}</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             )}

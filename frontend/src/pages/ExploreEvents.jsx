@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useContext } from "react";
+import { useNavigate } from "react-router-dom";
 import AuthContext from "../providers/AuthContext";
 import { API_ENDPOINTS } from "../config/api";
 import { FiCalendar, FiMapPin, FiClock, FiEye } from 'react-icons/fi';
 
 const ExploreEvents = () => {
   const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
@@ -207,7 +209,10 @@ const ExploreEvents = () => {
                   </div>
 
                   {/* Action Button */}
-                  <button className="w-full flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200">
+                  <button 
+                    onClick={() => navigate(`/event/${event.id}`)}
+                    className="w-full flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+                  >
                     <FiEye size={16} />
                     View Details
                   </button>
