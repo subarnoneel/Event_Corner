@@ -2,13 +2,13 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
 import { API_ENDPOINTS } from "../../config/api";
 import ReactMarkdown from 'react-markdown';
-import { 
-  FiCalendar, 
-  FiClock, 
-  FiMapPin, 
-  FiEye, 
-  FiArrowLeft, 
-  FiShare2, 
+import {
+  FiCalendar,
+  FiClock,
+  FiMapPin,
+  FiEye,
+  FiArrowLeft,
+  FiShare2,
   FiHeart,
   FiMail,
   FiPhone,
@@ -67,7 +67,7 @@ const EventDetail = () => {
     const daysInMonth = getDaysInMonth(currentDate);
     const firstDay = getFirstDayOfMonth(currentDate);
     const days = [];
-    
+
     // Previous month days
     const prevMonthDays = getDaysInMonth(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
     for (let i = firstDay - 1; i >= 0; i--) {
@@ -77,7 +77,7 @@ const EventDetail = () => {
         date: new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, prevMonthDays - i)
       });
     }
-    
+
     // Current month days
     for (let i = 1; i <= daysInMonth; i++) {
       days.push({
@@ -86,7 +86,7 @@ const EventDetail = () => {
         date: new Date(currentDate.getFullYear(), currentDate.getMonth(), i)
       });
     }
-    
+
     // Next month days to fill the grid
     const remainingDays = 42 - days.length; // 6 weeks * 7 days
     for (let i = 1; i <= remainingDays; i++) {
@@ -96,7 +96,7 @@ const EventDetail = () => {
         date: new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, i)
       });
     }
-    
+
     return days;
   }, [currentDate]);
 
@@ -127,20 +127,20 @@ const EventDetail = () => {
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      month: 'long', 
-      day: 'numeric', 
-      year: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
     });
   };
 
   const formatTime = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
       minute: '2-digit',
-      hour12: true 
+      hour12: true
     });
   };
 
@@ -199,7 +199,7 @@ const EventDetail = () => {
   // Get timeslots for a specific date
   const getTimeslotsForDate = (date) => {
     if (!event?.timeslots) return [];
-    
+
     return event.timeslots.filter(slot => {
       const slotStart = new Date(slot.start);
       const slotEnd = new Date(slot.end);
@@ -207,10 +207,10 @@ const EventDetail = () => {
       checkDate.setHours(0, 0, 0, 0);
       const nextDate = new Date(checkDate);
       nextDate.setDate(nextDate.getDate() + 1);
-      
+
       return (slotStart >= checkDate && slotStart < nextDate) ||
-             (slotEnd > checkDate && slotEnd <= nextDate) ||
-             (slotStart < checkDate && slotEnd > nextDate);
+        (slotEnd > checkDate && slotEnd <= nextDate) ||
+        (slotStart < checkDate && slotEnd > nextDate);
     });
   };
 
@@ -254,9 +254,8 @@ const EventDetail = () => {
                   <button
                     key={idx}
                     onClick={() => setSelectedImage(idx)}
-                    className={`w-16 h-16 rounded overflow-hidden border-2 transition ${
-                      selectedImage === idx ? 'border-white scale-110' : 'border-transparent opacity-60 hover:opacity-100'
-                    }`}
+                    className={`w-16 h-16 rounded overflow-hidden border-2 transition ${selectedImage === idx ? 'border-white scale-110' : 'border-transparent opacity-60 hover:opacity-100'
+                      }`}
                   >
                     <img src={img} alt={`View ${idx + 1}`} className="w-full h-full object-cover" />
                   </button>
@@ -272,7 +271,7 @@ const EventDetail = () => {
             </div>
           </div>
         )}
-        
+
         {/* Share and Favorite Buttons */}
         <div className="absolute top-6 right-6 flex gap-3">
           <button className="p-3 bg-white rounded-full shadow-lg hover:bg-gray-100 transition">
@@ -378,7 +377,7 @@ const EventDetail = () => {
             {event.timeslots && event.timeslots.length > 0 && (
               <div className="bg-white rounded-xl shadow-md p-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Event Schedule</h2>
-                
+
                 {/* Calendar Navigation */}
                 <div className="mb-6">
                   <div className="flex items-center justify-between mb-4">
@@ -402,39 +401,36 @@ const EventDetail = () => {
                         today
                       </button>
                     </div>
-                    
+
                     <h3 className="text-xl font-bold text-gray-900">
                       {formatMonthYear(currentDate)}
                     </h3>
-                    
+
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setCalendarView('month')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                          calendarView === 'month' 
-                            ? 'bg-gray-900 text-white' 
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${calendarView === 'month'
+                            ? 'bg-gray-900 text-white'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
+                          }`}
                       >
                         month
                       </button>
                       <button
                         onClick={() => setCalendarView('week')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                          calendarView === 'week' 
-                            ? 'bg-gray-900 text-white' 
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${calendarView === 'week'
+                            ? 'bg-gray-900 text-white'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
+                          }`}
                       >
                         week
                       </button>
                       <button
                         onClick={() => setCalendarView('day')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                          calendarView === 'day' 
-                            ? 'bg-gray-900 text-white' 
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${calendarView === 'day'
+                            ? 'bg-gray-900 text-white'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
+                          }`}
                       >
                         day
                       </button>
@@ -455,40 +451,69 @@ const EventDetail = () => {
                     {/* Calendar Body */}
                     <div className="grid grid-cols-7">
                       {calendarDays.map((dayInfo, idx) => {
-                        const timeslots = getTimeslotsForDate(dayInfo.date);
+                        // Sort timeslots by length (longer events first) and start time
+                        const timeslots = getTimeslotsForDate(dayInfo.date).sort((a, b) => {
+                          const durationA = new Date(a.end) - new Date(a.start);
+                          const durationB = new Date(b.end) - new Date(b.start);
+                          return durationB - durationA || new Date(a.start) - new Date(b.start);
+                        });
+
                         const isToday = new Date().toDateString() === dayInfo.date.toDateString();
-                        
+                        const currentDayStart = new Date(dayInfo.date);
+                        currentDayStart.setHours(0, 0, 0, 0);
+                        const currentDayEnd = new Date(dayInfo.date);
+                        currentDayEnd.setHours(23, 59, 59, 999);
+
                         return (
                           <div
                             key={idx}
-                            className={`min-h-[100px] border-b border-r p-2 ${
-                              !dayInfo.isCurrentMonth ? 'bg-gray-50 text-gray-400' : 'bg-white'
-                            } ${isToday ? 'bg-blue-50' : ''}`}
+                            className={`min-h-[100px] border-b border-r flex flex-col ${!dayInfo.isCurrentMonth ? 'bg-gray-50 text-gray-400' : 'bg-white'
+                              } ${isToday ? 'bg-blue-50' : ''}`}
                           >
-                            <div className={`text-sm font-medium mb-1 ${
-                              isToday ? 'text-blue-600 font-bold' : ''
-                            }`}>
+                            <div className={`text-sm font-medium p-2 ${isToday ? 'text-blue-600 font-bold' : ''
+                              }`}>
                               {dayInfo.day}
                             </div>
-                            
+
                             {/* Timeslots for this day */}
-                            <div className="space-y-1">
+                            <div className="flex-1 flex flex-col gap-[2px] pb-1">
                               {timeslots.map((slot) => {
                                 const startTime = new Date(slot.start);
-                                const formattedTime = startTime.toLocaleTimeString('en-US', { 
-                                  hour: 'numeric', 
+                                const endTime = new Date(slot.end);
+
+                                const isStart = startTime >= currentDayStart;
+                                const isEnd = endTime <= currentDayEnd;
+
+                                const formattedTime = startTime.toLocaleTimeString('en-US', {
+                                  hour: 'numeric',
                                   minute: '2-digit',
-                                  hour12: true 
+                                  hour12: true
                                 });
-                                
+
                                 return (
                                   <div
                                     key={slot.id}
-                                    className="text-xs px-2 py-1 rounded text-white font-medium truncate cursor-pointer hover:opacity-90 transition"
-                                    style={{ backgroundColor: slot.color || '#3b82f6' }}
+                                    className={`
+                                      text-xs font-medium truncate cursor-pointer hover:opacity-90 transition relative h-6 flex items-center
+                                      ${isStart ? 'rounded-l px-2 ml-1' : 'rounded-l-none pl-2 -ml-[1px]'}
+                                      ${isEnd ? 'rounded-r mr-1' : 'rounded-r-none -mr-[1px]'}
+                                    `}
+                                    style={{
+                                      backgroundColor: slot.color || '#3b82f6',
+                                      color: '#fff',
+                                      width: isStart && isEnd ? 'calc(100% - 8px)' : 'auto'
+                                    }}
                                     title={`${slot.title} - ${formattedTime}`}
                                   >
-                                    {slot.title}
+                                    {isStart && (
+                                      <span className="truncate">
+                                        {slot.title}
+                                        <span className="opacity-75 ml-1 text-[10px] hidden lg:inline">
+                                          {formattedTime}
+                                        </span>
+                                      </span>
+                                    )}
+                                    {!isStart && <span dangerouslySetInnerHTML={{ __html: '&nbsp;' }} />}
                                   </div>
                                 );
                               })}
@@ -508,22 +533,22 @@ const EventDetail = () => {
                       Added Timeslots ({event.timeslots.length})
                     </h3>
                   </div>
-                  
+
                   <div className="space-y-3">
                     {event.timeslots.map((slot, idx) => {
                       const startDate = new Date(slot.start);
                       const endDate = new Date(slot.end);
                       const dateRange = `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}, ${startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })} → ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}, ${endDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
-                      
+
                       return (
-                        <div 
-                          key={slot.id || idx} 
+                        <div
+                          key={slot.id || idx}
                           className="border rounded-lg p-4 hover:shadow-md transition"
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
-                                <div 
+                                <div
                                   className="w-3 h-3 rounded-full"
                                   style={{ backgroundColor: slot.color || '#3b82f6' }}
                                 ></div>
@@ -609,9 +634,9 @@ const EventDetail = () => {
                 </button>
                 {event.visibility && (
                   <p className="text-xs text-gray-500 text-center mt-3 capitalize">
-                    {event.visibility === 'public' ? '🌍 Open to everyone' : 
-                     event.visibility === 'private' ? '🔒 Private event' : 
-                     '🏛️ Institution only'}
+                    {event.visibility === 'public' ? '🌍 Open to everyone' :
+                      event.visibility === 'private' ? '🔒 Private event' :
+                        '🏛️ Institution only'}
                   </p>
                 )}
               </div>
@@ -670,7 +695,7 @@ const EventDetail = () => {
                     <FiMapPin className="text-green-600" />
                     Location
                   </h3>
-                  
+
                   {/* Map Preview - OpenStreetMap (No API key needed) */}
                   {event.venue_lat && event.venue_lng && (
                     <div className="w-full h-48 bg-gray-200 rounded-lg mb-4 overflow-hidden relative group cursor-pointer" onClick={openGoogleMaps}>
@@ -708,7 +733,7 @@ const EventDetail = () => {
                     </div>
                   )}
 
-                  <button 
+                  <button
                     onClick={openGoogleMaps}
                     className="w-full border-2 border-green-600 text-green-600 hover:bg-green-50 font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2"
                   >
