@@ -3,6 +3,14 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 import aiRoutes from './routes/ai.routes.js';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Load environment variables
 dotenv.config();
@@ -21,6 +29,41 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(__dirname, 'uploads', 'documents');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadsDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'doc-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const fileFilter = (req, file, cb) => {
+  // Accept PDF, JPG, PNG only
+  const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Only PDF, JPG, and PNG are allowed.'), false);
+  }
+};
+
+const upload = multer({
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
 
 // Middleware
 app.use(cors());
@@ -65,12 +108,18 @@ app.get('/api/test-db', async (req, res) => {
  *   password: string,
  *   role: 'participant' | 'organizer' | 'institution',
  *   institution: string (optional, for participants),
- *   institution_id: number (optional, for organizers)
+ *   institution_id: number (optional, for organizers),
+ *   institution_type: string (optional, for institutions),
+ *   eiin_number: string (optional, for schools/colleges/madrasas),
+ *   verification_documents: array (optional, file paths for institutions)
  * }
  */
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { firebase_uid, email, username, full_name, role, institution, institution_id } = req.body;
+    const { 
+      firebase_uid, email, username, full_name, role, institution, institution_id,
+      institution_type, eiin_number, verification_documents
+    } = req.body;
 
     // Validate required fields
     if (!firebase_uid || !email || !username || !full_name || !role) {
@@ -96,6 +145,23 @@ app.post('/api/auth/register', async (req, res) => {
       });
     }
 
+    // For institutions, validate institution type and documents
+    if (role === 'institution') {
+      if (!institution_type) {
+        return res.status(400).json({
+          success: false,
+          error: 'Institution type is required for institution registration'
+        });
+      }
+      
+      if (!verification_documents || verification_documents.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'At least one verification document is required'
+        });
+      }
+    }
+
     // Call the stored procedure
     const { data, error } = await supabase.rpc('register_user', {
       p_firebase_uid: firebase_uid,
@@ -104,7 +170,10 @@ app.post('/api/auth/register', async (req, res) => {
       p_full_name: full_name,
       p_role: role,
       p_institution: institution || null,
-      p_institution_id: institution_id || null
+      p_institution_id: institution_id || null,
+      p_institution_type: institution_type || null,
+      p_eiin_number: eiin_number || null,
+      p_verification_documents: verification_documents || null
     });
 
     if (error) {
@@ -504,8 +573,6 @@ app.get('/api/superadmin/users/search', async (req, res) => {
   }
 });
 
-
-
 /**
  * PATCH /api/superadmin/users/:userId/toggle-active
  * Activate or deactivate a user
@@ -651,8 +718,6 @@ app.get('/api/superadmin/roles', async (req, res) => {
   }
 });
 
-
-
 /**
  * POST /api/superadmin/roles/bulk-assign
  * Assign a role to multiple users
@@ -691,7 +756,6 @@ app.post('/api/superadmin/roles/bulk-assign', async (req, res) => {
     });
   }
 });
-
 
 // ============================================================================
 // INSTITUTION ENDPOINTS
@@ -784,7 +848,6 @@ app.patch('/api/institution/organizers/:organizerId/verify', async (req, res) =>
     });
   }
 });
-
 
 // ============================================================================
 // EVENT MANAGEMENT ENDPOINTS
@@ -982,15 +1045,256 @@ app.get('/api/events', async (req, res) => {
   }
 });
 
-
 // ============================================================================
 // AI ROUTES
 // ============================================================================
 app.use('/api/ai', aiRoutes);
 
+// ============================================================================
+// DOCUMENT UPLOAD ROUTES
+// ============================================================================
+
+/**
+ * POST /api/upload/documents
+ * Upload verification documents for institutions
+ * Accepts multiple files (up to 5)
+ */
+app.post('/api/upload/documents', upload.array('documents', 5), async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No files uploaded'
+      });
+    }
+
+    // Return array of file paths
+    const filePaths = req.files.map(file => `documents/${file.filename}`);
+
+    res.json({
+      success: true,
+      message: 'Files uploaded successfully',
+      files: filePaths
+    });
+  } catch (err) {
+    console.error('Error uploading documents:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to upload documents'
+    });
+  }
+});
+
+/**
+ * GET /api/documents/:filename
+ * Serve a verification document (admin only)
+ * This should be protected with admin authentication in production
+ */
+app.get('/api/documents/:filename', (req, res) => {
+  try {
+    const { filename } = req.params;
+    const filePath = path.join(uploadsDir, filename);
+
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        error: 'Document not found'
+      });
+    }
+
+    // Send file
+    res.sendFile(filePath);
+  } catch (err) {
+    console.error('Error serving document:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to serve document'
+    });
+  }
+});
+
+// ============================================================================
+// ADMIN INSTITUTION APPROVAL ROUTES
+// ============================================================================
+
+/**
+ * GET /api/admin/institutions/pending
+ * Get all pending institution registrations
+ */
+app.get('/api/admin/institutions/pending', async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+
+    const { data, error } = await supabase.rpc('get_pending_institutions', {
+      p_page: parseInt(page),
+      p_limit: parseInt(limit)
+    });
+
+    if (error) {
+      console.error('Error fetching pending institutions:', error);
+      return res.status(400).json({
+        success: false,
+        error: error.message || 'Failed to fetch pending institutions'
+      });
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error('Unexpected error fetching pending institutions:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+/**
+ * GET /api/admin/institutions/:institutionId
+ * Get detailed information about an institution
+ */
+app.get('/api/admin/institutions/:institutionId', async (req, res) => {
+  try {
+    const { institutionId } = req.params;
+
+    const { data, error } = await supabase.rpc('get_institution_details', {
+      p_institution_id: institutionId
+    });
+
+    if (error) {
+      console.error('Error fetching institution details:', error);
+      return res.status(400).json({
+        success: false,
+        error: error.message || 'Failed to fetch institution details'
+      });
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error('Unexpected error fetching institution details:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+/**
+ * POST /api/admin/institutions/:institutionId/approve
+ * Approve an institution registration
+ * Body: { approved_by: uuid }
+ */
+app.post('/api/admin/institutions/:institutionId/approve', async (req, res) => {
+  try {
+    const { institutionId } = req.params;
+    const { approved_by } = req.body;
+
+    if (!approved_by) {
+      return res.status(400).json({
+        success: false,
+        error: 'approved_by (admin user ID) is required'
+      });
+    }
+
+    const { data, error } = await supabase.rpc('approve_institution', {
+      p_institution_id: institutionId,
+      p_approved_by: approved_by
+    });
+
+    if (error) {
+      console.error('Error approving institution:', error);
+      return res.status(400).json({
+        success: false,
+        error: error.message || 'Failed to approve institution'
+      });
+    }
+
+    // TODO: Send approval email to institution
+    // You can integrate email service here (e.g., SendGrid, Nodemailer)
+    // Example:
+    // await sendApprovalEmail(data.institution_email, data.institution_name);
+
+    res.json(data);
+  } catch (err) {
+    console.error('Unexpected error approving institution:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+/**
+ * POST /api/admin/institutions/:institutionId/reject
+ * Reject an institution registration
+ * Body: { rejection_reason: string, rejected_by: uuid }
+ */
+app.post('/api/admin/institutions/:institutionId/reject', async (req, res) => {
+  try {
+    const { institutionId } = req.params;
+    const { rejection_reason, rejected_by } = req.body;
+
+    if (!rejected_by) {
+      return res.status(400).json({
+        success: false,
+        error: 'rejected_by (admin user ID) is required'
+      });
+    }
+
+    if (!rejection_reason || rejection_reason.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'rejection_reason is required'
+      });
+    }
+
+    const { data, error } = await supabase.rpc('reject_institution', {
+      p_institution_id: institutionId,
+      p_rejection_reason: rejection_reason,
+      p_rejected_by: rejected_by
+    });
+
+    if (error) {
+      console.error('Error rejecting institution:', error);
+      return res.status(400).json({
+        success: false,
+        error: error.message || 'Failed to reject institution'
+      });
+    }
+
+    // TODO: Send rejection email to institution
+    // You can integrate email service here (e.g., SendGrid, Nodemailer)
+    // Example:
+    // await sendRejectionEmail(data.institution_email, data.institution_name, rejection_reason);
+
+    res.json(data);
+  } catch (err) {
+    console.error('Unexpected error rejecting institution:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
+  
+  // Handle multer errors
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        error: 'File size too large. Maximum size is 10MB.'
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      error: err.message
+    });
+  }
+  
   res.status(500).json({ error: 'Internal server error' });
 });
 
@@ -998,48 +1302,3 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`🚀 Server is running on http://localhost:${PORT}`);
 });
-
-
-
-//////////
-/*FOR EVENT DETAIL PAGE EVENT FETCHING  */
-// GET EVENT DETAILS BY ID
-// app.get("/api/events/:id", async (req, res) => {
-//   const { id } = req.params;
-
-//   try {
-//     const { data, error } = await supabase
-//       .from("events")
-//       .select(`
-//         id,
-//         title,
-//         description,
-//         category,
-//         tags,
-//         additional_info,
-//         view_count,
-//         created_at,
-//         updated_at
-//       `)
-//       .eq("id", id)
-//       .single();
-
-//     if (error || !data) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Event not found"
-//       });
-//     }
-
-//     res.json({
-//       success: true,
-//       event: data
-//     });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({
-//       success: false,
-//       message: "Internal server error"
-//     });
-//   }
-// });

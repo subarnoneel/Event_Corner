@@ -6,11 +6,10 @@ import Register from "../pages/Register";
 import ExploreEvents from "../pages/ExploreEvents";
 import Superadmin from "../pages/dashboard/superadmin/Superadmin";
 import SuperadminProfile from "../pages/dashboard/superadmin/SuperadminProfile";
-import InstitutionManagement from "../pages/dashboard/superadmin/InstitutionManagement";
+import UnifiedInstitutionManagement from "../components/UnifiedInstitutionManagement";
 import RoleAssignment from "../pages/dashboard/superadmin/RoleAssignment";
 import Admin from "../pages/dashboard/admin/Admin";
 import AdminProfile from "../pages/dashboard/admin/AdminProfile";
-import AdminInstitutionManagement from "../pages/dashboard/admin/AdminInstitutionManagement";
 import AdminUserManagement from "../pages/dashboard/admin/AdminUserManagement";
 import Institution from "../pages/dashboard/institution/Institution";
 import InstitutionProfile from "../pages/dashboard/institution/InstitutionProfile";
@@ -62,7 +61,7 @@ const PublicRoutes = createBrowserRouter([
                     },
                     {
                         path: "institutions",
-                        element: <InstitutionManagement />
+                        element: <UnifiedInstitutionManagement />
                     },
                     {
                         path: "roles",
@@ -84,7 +83,7 @@ const PublicRoutes = createBrowserRouter([
                     },
                     {
                         path: "institutions",
-                        element: <AdminInstitutionManagement />
+                        element: <UnifiedInstitutionManagement />
                     },
                     {
                         path: "users",

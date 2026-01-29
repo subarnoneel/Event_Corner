@@ -5,7 +5,10 @@ CREATE OR REPLACE FUNCTION register_user(
     p_full_name VARCHAR(255),
     p_role VARCHAR(50),
     p_institution VARCHAR(255) DEFAULT NULL,
-    p_institution_id UUID DEFAULT NULL
+    p_institution_id UUID DEFAULT NULL,
+    p_institution_type VARCHAR(50) DEFAULT NULL,
+    p_eiin_number VARCHAR(6) DEFAULT NULL,
+    p_verification_documents TEXT[] DEFAULT NULL
 )
 RETURNS JSON AS $$
 DECLARE
@@ -19,6 +22,16 @@ BEGIN
             'success', FALSE,
             'error', 'Invalid role. Only participant, organizer, and institution can register.'
         );
+    END IF;
+
+    -- Validate EIIN number format for schools/colleges/madrasas
+    IF p_role = 'institution' AND p_institution_type = 'school_college_madrasa' THEN
+        IF p_eiin_number IS NULL OR p_eiin_number !~ '^[0-9]{6}$' THEN
+            RETURN json_build_object(
+                'success', FALSE,
+                'error', 'Invalid EIIN number. Must be exactly 6 digits.'
+            );
+        END IF;
     END IF;
 
     -- Check if email already exists
@@ -47,9 +60,16 @@ BEGIN
         );
     END IF;
 
-    -- Create the user
-    INSERT INTO users (firebase_uid, email, username, full_name, institution, institution_id)
-    VALUES (p_firebase_uid, p_email, p_username, p_full_name, p_institution, p_institution_id)
+    -- Create the user with institution verification fields
+    INSERT INTO users (
+        firebase_uid, email, username, full_name, institution, institution_id,
+        institution_type, eiin_number, verification_documents, verification_status
+    )
+    VALUES (
+        p_firebase_uid, p_email, p_username, p_full_name, p_institution, p_institution_id,
+        p_institution_type, p_eiin_number, p_verification_documents,
+        CASE WHEN p_role = 'institution' THEN 'pending' ELSE NULL END
+    )
     RETURNING id INTO v_user_id;
 
     -- Assign the role
@@ -68,6 +88,7 @@ BEGIN
         'profile_picture_url', users.profile_picture_url,
         'banner_url', users.banner_url,
         'is_verified', users.is_verified,
+        'verification_status', users.verification_status,
         'created_at', users.created_at
     ) INTO v_result
     FROM users WHERE id = v_user_id;
@@ -1224,6 +1245,244 @@ EXCEPTION WHEN OTHERS THEN
     RETURN json_build_object(
         'success', FALSE,
         'error', 'Failed to update organizer verification: ' || SQLERRM
+    );
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- ============================================================================
+-- FUNCTION: get_pending_institutions
+-- Purpose: Get all pending institution registrations for admin approval
+-- Parameters:
+--   p_page: Page number (default 1)
+--   p_limit: Records per page (default 10)
+-- Returns: JSON with pending institutions and their verification details
+-- ============================================================================
+CREATE OR REPLACE FUNCTION get_pending_institutions(
+    p_page INTEGER DEFAULT 1,
+    p_limit INTEGER DEFAULT 10
+)
+RETURNS JSON AS $$
+DECLARE
+    v_offset INTEGER;
+    v_total_count INTEGER;
+    v_institutions JSON;
+BEGIN
+    v_offset := (p_page - 1) * p_limit;
+    
+    -- Get total count of pending institutions
+    SELECT COUNT(*) INTO v_total_count
+    FROM users u 
+    JOIN user_roles ur ON u.id = ur.user_id 
+    JOIN roles r ON ur.role_id = r.id 
+    WHERE r.role_name = 'institution' 
+    AND u.is_active = TRUE 
+    AND u.verification_status = 'pending';
+    
+    -- Get pending institutions with all verification details
+    SELECT json_agg(row_to_json(t)) INTO v_institutions
+    FROM (
+        SELECT 
+            u.id,
+            u.firebase_uid,
+            u.email,
+            u.username,
+            u.full_name,
+            u.institution_type,
+            u.eiin_number,
+            u.verification_documents,
+            u.verification_status,
+            u.created_at
+        FROM users u 
+        JOIN user_roles ur ON u.id = ur.user_id 
+        JOIN roles r ON ur.role_id = r.id 
+        WHERE r.role_name = 'institution' 
+        AND u.is_active = TRUE 
+        AND u.verification_status = 'pending'
+        ORDER BY u.created_at DESC
+        LIMIT p_limit OFFSET v_offset
+    ) t;
+    
+    RETURN json_build_object(
+        'success', TRUE,
+        'data', COALESCE(v_institutions, '[]'::json),
+        'pagination', json_build_object(
+            'current_page', p_page,
+            'per_page', p_limit,
+            'total_count', v_total_count,
+            'total_pages', CEIL(v_total_count::FLOAT / p_limit),
+            'has_next', (p_page * p_limit) < v_total_count,
+            'has_prev', p_page > 1
+        )
+    );
+
+EXCEPTION WHEN OTHERS THEN
+    RETURN json_build_object(
+        'success', FALSE,
+        'error', 'Failed to fetch pending institutions: ' || SQLERRM
+    );
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- ============================================================================
+-- FUNCTION: approve_institution
+-- Purpose: Approve an institution registration
+-- Parameters:
+--   p_institution_id: Institution user ID
+--   p_approved_by: Admin user ID
+-- Returns: JSON with success status and institution email for notification
+-- ============================================================================
+CREATE OR REPLACE FUNCTION approve_institution(
+    p_institution_id UUID,
+    p_approved_by UUID
+)
+RETURNS JSON AS $$
+DECLARE
+    v_institution_email VARCHAR(255);
+    v_institution_name VARCHAR(255);
+BEGIN
+    -- Get institution details
+    SELECT email, full_name INTO v_institution_email, v_institution_name
+    FROM users WHERE id = p_institution_id;
+    
+    IF v_institution_email IS NULL THEN
+        RETURN json_build_object(
+            'success', FALSE,
+            'error', 'Institution not found.'
+        );
+    END IF;
+    
+    -- Update institution status
+    UPDATE users SET
+        verification_status = 'approved',
+        is_verified = TRUE,
+        verified_at = NOW(),
+        verified_by = p_approved_by,
+        updated_at = NOW()
+    WHERE id = p_institution_id;
+    
+    RETURN json_build_object(
+        'success', TRUE,
+        'message', 'Institution approved successfully.',
+        'institution_id', p_institution_id,
+        'institution_email', v_institution_email,
+        'institution_name', v_institution_name
+    );
+
+EXCEPTION WHEN OTHERS THEN
+    RETURN json_build_object(
+        'success', FALSE,
+        'error', 'Failed to approve institution: ' || SQLERRM
+    );
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- ============================================================================
+-- FUNCTION: reject_institution
+-- Purpose: Reject an institution registration with reason
+-- Parameters:
+--   p_institution_id: Institution user ID
+--   p_rejection_reason: Reason for rejection
+--   p_rejected_by: Admin user ID
+-- Returns: JSON with success status and institution email for notification
+-- ============================================================================
+CREATE OR REPLACE FUNCTION reject_institution(
+    p_institution_id UUID,
+    p_rejection_reason TEXT,
+    p_rejected_by UUID
+)
+RETURNS JSON AS $$
+DECLARE
+    v_institution_email VARCHAR(255);
+    v_institution_name VARCHAR(255);
+BEGIN
+    -- Get institution details
+    SELECT email, full_name INTO v_institution_email, v_institution_name
+    FROM users WHERE id = p_institution_id;
+    
+    IF v_institution_email IS NULL THEN
+        RETURN json_build_object(
+            'success', FALSE,
+            'error', 'Institution not found.'
+        );
+    END IF;
+    
+    -- Update institution status
+    UPDATE users SET
+        verification_status = 'rejected',
+        rejection_reason = p_rejection_reason,
+        verified_by = p_rejected_by,
+        updated_at = NOW()
+    WHERE id = p_institution_id;
+    
+    RETURN json_build_object(
+        'success', TRUE,
+        'message', 'Institution rejected.',
+        'institution_id', p_institution_id,
+        'institution_email', v_institution_email,
+        'institution_name', v_institution_name,
+        'rejection_reason', p_rejection_reason
+    );
+
+EXCEPTION WHEN OTHERS THEN
+    RETURN json_build_object(
+        'success', FALSE,
+        'error', 'Failed to reject institution: ' || SQLERRM
+    );
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- ============================================================================
+-- FUNCTION: get_institution_details
+-- Purpose: Get detailed information about an institution including documents
+-- Parameters:
+--   p_institution_id: Institution user ID
+-- Returns: JSON with complete institution details
+-- ============================================================================
+CREATE OR REPLACE FUNCTION get_institution_details(p_institution_id UUID)
+RETURNS JSON AS $$
+DECLARE
+    v_result JSON;
+BEGIN
+    SELECT json_build_object(
+        'success', TRUE,
+        'data', json_build_object(
+            'id', u.id,
+            'email', u.email,
+            'username', u.username,
+            'full_name', u.full_name,
+            'institution_type', u.institution_type,
+            'eiin_number', u.eiin_number,
+            'verification_documents', u.verification_documents,
+            'verification_status', u.verification_status,
+            'rejection_reason', u.rejection_reason,
+            'is_verified', u.is_verified,
+            'verified_at', u.verified_at,
+            'verified_by', u.verified_by,
+            'created_at', u.created_at
+        )
+    ) INTO v_result
+    FROM users u
+    JOIN user_roles ur ON u.id = ur.user_id
+    JOIN roles r ON ur.role_id = r.id
+    WHERE u.id = p_institution_id AND r.role_name = 'institution';
+    
+    IF v_result IS NULL THEN
+        RETURN json_build_object(
+            'success', FALSE,
+            'error', 'Institution not found.'
+        );
+    END IF;
+    
+    RETURN v_result;
+
+EXCEPTION WHEN OTHERS THEN
+    RETURN json_build_object(
+        'success', FALSE,
+        'error', 'Failed to fetch institution details: ' || SQLERRM
     );
 END;
 $$ LANGUAGE plpgsql;

@@ -34,6 +34,13 @@ CREATE TABLE users (
     
     -- Institution-specific fields (nullable)
     additional_info JSONB,
+    institution_type VARCHAR(50), -- 'school_college_madrasa' or 'university'
+    eiin_number VARCHAR(6), -- 6-digit EIIN for schools/colleges/madrasas
+    verification_documents TEXT[], -- Array of document file paths
+    verification_status VARCHAR(20) DEFAULT 'pending', -- 'pending', 'approved', 'rejected'
+    rejection_reason TEXT, -- Reason for rejection
+    verified_at TIMESTAMP WITH TIME ZONE,
+    verified_by UUID REFERENCES users(id) ON DELETE SET NULL, -- Admin who verified
     
     -- Organizer-specific fields (nullable)
     institution_id UUID REFERENCES users(id) ON DELETE SET NULL, -- Reference to parent institution

@@ -5,6 +5,7 @@ import Lottie from 'lottie-react';
 import loginAnimation from '../assets/ladylog.json';
 import AuthContext from '../providers/AuthContext';
 import SearchableInstitution from '../components/SearchableInstitution';
+import DocumentUploader from '../components/DocumentUploader';
 
 const Register = () => {
   const { register, loading } = useContext(AuthContext);
@@ -20,7 +21,10 @@ const Register = () => {
     confirmPassword: '',
     institution: '',
     institution_id: null,
-    institution_name: ''
+    institution_name: '',
+    institution_type: '',
+    eiin_number: '',
+    verification_documents: []
   });
 
   const roles = [
@@ -64,6 +68,24 @@ const Register = () => {
       return;
     }
     
+    // Validate institution type and documents for institutions
+    if (selectedRole === 'institution') {
+      if (!formData.institution_type) {
+        alert('Please select institution type!');
+        return;
+      }
+      
+      if (formData.institution_type === 'school_college_madrasa' && !formData.eiin_number) {
+        alert('Please enter EIIN number!');
+        return;
+      }
+      
+      if (!formData.verification_documents || formData.verification_documents.length === 0) {
+        alert('Please upload at least one verification document!');
+        return;
+      }
+    }
+    
     // Prepare registration data
     const registrationData = {
       role: selectedRole,
@@ -78,6 +100,12 @@ const Register = () => {
       registrationData.institution_id = formData.institution_id;
     } else if (selectedRole === 'participant') {
       registrationData.institution = formData.institution;
+    } else if (selectedRole === 'institution') {
+      registrationData.institution_type = formData.institution_type;
+      registrationData.verification_documents = formData.verification_documents;
+      if (formData.institution_type === 'school_college_madrasa') {
+        registrationData.eiin_number = formData.eiin_number;
+      }
     }
     
     // Call the register function from AuthProvider
@@ -213,6 +241,76 @@ const Register = () => {
                     required
                   />
                 </div>
+
+                {/* Institution Type - Only for Institution role */}
+                {selectedRole === 'institution' && (
+                  <div>
+                    <label htmlFor="institution_type" className="block text-sm font-medium text-gray-700 mb-2">
+                      Institution Type <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      id="institution_type"
+                      name="institution_type"
+                      value={formData.institution_type}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all bg-white"
+                      required
+                    >
+                      <option value="">Select institution type</option>
+                      <option value="school_college_madrasa">School/College/Madrasa</option>
+                      <option value="university">University</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* EIIN Number - Only for School/College/Madrasa */}
+                {selectedRole === 'institution' && formData.institution_type === 'school_college_madrasa' && (
+                  <div>
+                    <label htmlFor="eiin_number" className="block text-sm font-medium text-gray-700 mb-2">
+                      EIIN Number <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      id="eiin_number"
+                      name="eiin_number"
+                      value={formData.eiin_number}
+                      onChange={handleChange}
+                      placeholder="Enter 6-digit EIIN number"
+                      pattern="[0-9]{6}"
+                      maxLength="6"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                      required
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Must be exactly 6 digits (0-9 only)</p>
+                  </div>
+                )}
+
+                {/* Document Upload - Only for Institution role */}
+                {selectedRole === 'institution' && formData.institution_type && (
+                  <div>
+                    <DocumentUploader
+                      onUploadSuccess={(filePaths) => {
+                        setFormData({
+                          ...formData,
+                          verification_documents: filePaths
+                        });
+                      }}
+                      currentDocuments={formData.verification_documents.map(path => ({
+                        path,
+                        name: path.split('/').pop(),
+                        type: path.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg'
+                      }))}
+                      label="Verification Documents"
+                      instructions={
+                        formData.institution_type === 'school_college_madrasa'
+                          ? "Upload official documents with EIIN number visible (e.g., Trade License, Registration Certificate)"
+                          : "Upload UGC approval letter, Government registration certificate, or Trade License"
+                      }
+                      maxFiles={5}
+                      required={true}
+                    />
+                  </div>
+                )}
 
                 {/* Password */}
                 <div>

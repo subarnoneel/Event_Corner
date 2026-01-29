@@ -54,6 +54,9 @@ const AuthProvider = ({ children }) => {
         role: registrationData.role,
         institution: registrationData.institution || null,
         institution_id: registrationData.institution_id || null,
+        institution_type: registrationData.institution_type || null,
+        eiin_number: registrationData.eiin_number || null,
+        verification_documents: registrationData.verification_documents || null,
       };
 
       const response = await axios.post(API_ENDPOINTS.REGISTER, backendData);

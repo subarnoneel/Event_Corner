@@ -20,6 +20,16 @@ export const API_ENDPOINTS = {
     USER_PROFILE: (userId) => `${API_BASE_URL}/api/users/${userId}/profile`,
     UPDATE_USER_PROFILE: (userId) => `${API_BASE_URL}/api/users/${userId}/profile`,
     
+    // Document Upload
+    UPLOAD_DOCUMENTS: `${API_BASE_URL}/api/upload/documents`,
+    GET_DOCUMENT: (filename) => `${API_BASE_URL}/api/documents/${filename}`,
+    
+    // Admin - Institution Approval
+    ADMIN_PENDING_INSTITUTIONS: `${API_BASE_URL}/api/admin/institutions/pending`,
+    ADMIN_INSTITUTION_DETAILS: (institutionId) => `${API_BASE_URL}/api/admin/institutions/${institutionId}`,
+    ADMIN_APPROVE_INSTITUTION: (institutionId) => `${API_BASE_URL}/api/admin/institutions/${institutionId}/approve`,
+    ADMIN_REJECT_INSTITUTION: (institutionId) => `${API_BASE_URL}/api/admin/institutions/${institutionId}/reject`,
+    
     // Superadmin - Institution Management
     SUPERADMIN_INSTITUTIONS: `${API_BASE_URL}/api/superadmin/institutions`,
     SUPERADMIN_VERIFY_INSTITUTION: (userId) => `${API_BASE_URL}/api/superadmin/institutions/${userId}/verify`,
