@@ -3,11 +3,15 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 import aiRoutes from './routes/ai.routes.js';
+import approvalRoutes from './routes/approval.routes.js';
+import { verifyEmailConnection } from './services/email.service.js';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import crypto from 'crypto';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -116,7 +120,7 @@ app.get('/api/test-db', async (req, res) => {
  */
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { 
+    const {
       firebase_uid, email, username, full_name, role, institution, institution_id,
       institution_type, eiin_number, verification_documents
     } = req.body;
@@ -153,7 +157,7 @@ app.post('/api/auth/register', async (req, res) => {
           error: 'Institution type is required for institution registration'
         });
       }
-      
+
       if (!verification_documents || verification_documents.length === 0) {
         return res.status(400).json({
           success: false,
@@ -769,12 +773,12 @@ app.post('/api/superadmin/roles/bulk-assign', async (req, res) => {
 app.get('/api/institution/:institutionId/organizers', async (req, res) => {
   try {
     const { institutionId } = req.params;
-    const { 
-      search = '', 
-      sort_by = 'is_verified', 
-      sort_order = 'DESC', 
-      page = 1, 
-      limit = 50 
+    const {
+      search = '',
+      sort_by = 'is_verified',
+      sort_order = 'DESC',
+      page = 1,
+      limit = 50
     } = req.query;
 
     const { data, error } = await supabase.rpc('get_organizers_by_institution', {
@@ -929,10 +933,85 @@ app.post('/api/events', async (req, res) => {
     if (data && data.length > 0) {
       const result = data[0];
       if (result.success) {
+        const eventId = result.event_id;
+
+        // ===== APPROVAL SYSTEM LOGIC =====
+        // Check if contact email differs from creator's email
+        let requiresApproval = false;
+        let approvalStatus = 'approved'; // Default: auto-approve
+
+        if (contactEmail) {
+          // Get creator's email
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('email')
+            .eq('id', created_by)
+            .single();
+
+          if (!userError && userData) {
+            // Compare emails (case-insensitive)
+            const creatorEmail = userData.email.toLowerCase();
+            const eventContactEmail = contactEmail.toLowerCase();
+
+            if (creatorEmail !== eventContactEmail) {
+              requiresApproval = true;
+              approvalStatus = 'pending_approval';
+
+              // Generate approval token and expiry (7 days)
+              const approvalToken = crypto.randomUUID();
+              const expiresAt = new Date();
+              expiresAt.setDate(expiresAt.getDate() + 7);
+
+              // Update event with approval fields
+              await supabase
+                .from('events')
+                .update({
+                  requires_approval: true,
+                  approval_status: 'pending_approval',
+                  approval_token: approvalToken,
+                  approval_token_expires_at: expiresAt.toISOString(),
+                  approval_requested_at: new Date().toISOString()
+                })
+                .eq('id', eventId);
+
+              // Send approval email
+              try {
+                const { sendApprovalEmail } = await import('./services/email.service.js');
+                const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+
+                await sendApprovalEmail({
+                  event: {
+                    title: title,
+                    description: description,
+                    category: category,
+                    venue_name: venueName,
+                    venue_type: venueType,
+                    created_by_name: userData.full_name || userData.email
+                  },
+                  contactEmail: contactEmail,
+                  approvalToken: approvalToken,
+                  baseUrl: baseUrl
+                });
+
+                console.log(`✅ Approval email sent for event: ${title}`);
+              } catch (emailError) {
+                console.error('❌ Failed to send approval email:', emailError);
+                // Don't fail the event creation if email fails
+                // Event is created but will need manual approval/email resend
+              }
+            }
+          }
+        }
+
+        // Return response based on approval status
         res.status(201).json({
           success: true,
-          message: result.message,
-          event_id: result.event_id
+          message: requiresApproval
+            ? 'Event created! A verification email has been sent to the contact email.'
+            : result.message,
+          event_id: eventId,
+          requires_approval: requiresApproval,
+          approval_status: approvalStatus
         });
       } else {
         res.status(400).json({
@@ -946,6 +1025,7 @@ app.post('/api/events', async (req, res) => {
         error: 'Unexpected response from database'
       });
     }
+
   } catch (err) {
     console.error('Unexpected error creating event:', err);
     res.status(500).json({
@@ -1049,6 +1129,12 @@ app.get('/api/events', async (req, res) => {
 // AI ROUTES
 // ============================================================================
 app.use('/api/ai', aiRoutes);
+
+// ============================================================================
+// APPROVAL ROUTES (for email verification)
+// ============================================================================
+app.use('/api/approval', approvalRoutes);
+
 
 // ============================================================================
 // DOCUMENT UPLOAD ROUTES
@@ -1280,7 +1366,7 @@ app.post('/api/admin/institutions/:institutionId/reject', async (req, res) => {
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  
+
   // Handle multer errors
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
@@ -1294,11 +1380,15 @@ app.use((err, req, res, next) => {
       error: err.message
     });
   }
-  
+
   res.status(500).json({ error: 'Internal server error' });
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`🚀 Server is running on http://localhost:${PORT}`);
+
+  // Verify email service connection
+  await verifyEmailConnection();
 });
+

@@ -19,17 +19,17 @@ const MyEvents = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Build query parameters - fetch events created by this specific user
       const params = new URLSearchParams();
       if (userData?.user_id || user.uid) {
         params.append('created_by', userData?.user_id || user.uid);
       }
       params.append('limit', '100'); // Fetch more events
-      
+
       const url = `${API_ENDPOINTS.EVENTS}${params.toString() ? '?' + params.toString() : ''}`;
       console.log('Fetching events from:', url);
-      
+
       const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${user.token || user.accessToken}`,
@@ -42,7 +42,7 @@ const MyEvents = () => {
 
       const data = await response.json();
       console.log('API Response:', data);
-      
+
       // Check if the response has the events array
       if (data.success && Array.isArray(data.events)) {
         setEvents(data.events);
@@ -60,10 +60,10 @@ const MyEvents = () => {
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
     });
   };
 
@@ -79,7 +79,7 @@ const MyEvents = () => {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-6">
         <p className="text-red-600">Error loading events: {error}</p>
-        <button 
+        <button
           onClick={fetchMyEvents}
           className="mt-3 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
         >
@@ -108,8 +108,8 @@ const MyEvents = () => {
           </div>
           <h3 className="text-xl font-semibold text-gray-900 mb-2">No Events Yet</h3>
           <p className="text-gray-600 mb-6">You haven't created any events yet.</p>
-          <a 
-            href="/events/create" 
+          <a
+            href="/events/create"
             className="inline-block px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
           >
             Create Your First Event
@@ -118,15 +118,15 @@ const MyEvents = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {events.map((event) => (
-            <div 
+            <div
               key={event.event_id}
               className="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden"
             >
               {/* Event Image */}
               <div className="h-48 bg-gradient-to-br from-blue-400 to-blue-600">
                 {event.banner_url || event.thumbnail_url ? (
-                  <img 
-                    src={event.banner_url || event.thumbnail_url} 
+                  <img
+                    src={event.banner_url || event.thumbnail_url}
                     alt={event.title}
                     className="w-full h-full object-cover"
                   />
@@ -142,13 +142,13 @@ const MyEvents = () => {
                 <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
                   {event.title || 'Untitled Event'}
                 </h3>
-                
+
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center text-sm text-gray-600">
                     <FiClock className="mr-2 flex-shrink-0" size={16} />
                     <span>{formatDate(event.created_at)}</span>
                   </div>
-                  
+
                   {event.venue_name && (
                     <div className="flex items-center text-sm text-gray-600">
                       <FiMapPin className="mr-2 flex-shrink-0" size={16} />
@@ -156,19 +156,38 @@ const MyEvents = () => {
                     </div>
                   )}
 
-                  {event.status && (
-                    <div className="flex items-center text-sm">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        event.status === 'published' 
-                          ? 'bg-green-100 text-green-800' 
-                          : event.status === 'draft'
+                  {/* Status Badges - Side by Side */}
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    {event.status && (
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${event.status === 'published'
+                        ? 'bg-green-100 text-green-800'
+                        : event.status === 'draft'
                           ? 'bg-yellow-100 text-yellow-800'
                           : 'bg-gray-100 text-gray-800'
-                      }`}>
+                        }`}>
                         {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
                       </span>
-                    </div>
-                  )}
+                    )}
+
+                    {event.approval_status && (
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${event.approval_status === 'approved'
+                        ? 'bg-green-100 text-green-800'
+                        : event.approval_status === 'pending_approval'
+                          ? 'bg-amber-100 text-amber-800'
+                          : event.approval_status === 'rejected'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                        {event.approval_status === 'pending_approval'
+                          ? '⏳ Pending Approval'
+                          : event.approval_status === 'approved'
+                            ? '✅ Approved'
+                            : event.approval_status === 'rejected'
+                              ? '❌ Rejected'
+                              : event.approval_status}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Action Buttons */}
