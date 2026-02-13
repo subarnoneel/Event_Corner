@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import NavBar from './Navbar.jsx';
 import Footer from './Footer.jsx';
+import ChatBot from './ChatBot.jsx';
 import { Toaster } from 'react-hot-toast';
 
 const MainLayout = () => {
@@ -17,6 +18,7 @@ const MainLayout = () => {
                 <Footer></Footer>
             </div>
             <Toaster position="top-right"  />
+            <ChatBot />
         </div>
     );
 };
