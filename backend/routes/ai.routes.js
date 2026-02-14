@@ -172,4 +172,53 @@ router.post('/chat', async (req, res) => {
   }
 });
 
+// POST /api/ai/create-event-conversation - Conversational event creation
+router.post('/create-event-conversation', async (req, res) => {
+  const { message, conversation_history } = req.body || {};
+
+  if (!message || !message.trim()) {
+    return res.status(400).json({ success: false, error: 'Message is required' });
+  }
+
+  console.log('🎯 Event conversation request:', message.substring(0, 50) + '...');
+
+  try {
+    const axios = (await import('axios')).default;
+
+    const response = await axios.post('http://localhost:5001/create-event-conversation', {
+      message,
+      conversation_history: conversation_history || []
+    }, {
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 60000
+    });
+
+    console.log('✅ Event conversation response received');
+    return res.json(response.data);
+
+  } catch (error) {
+    console.error('Event conversation error:', error.message);
+
+    if (error.code === 'ECONNREFUSED') {
+      return res.status(503).json({
+        success: false,
+        error: 'AI server not running. Start: python backend/ai/ai_server.py'
+      });
+    }
+
+    if (error.response?.status === 503) {
+      return res.status(503).json({
+        success: false,
+        error: 'Ollama not running. Ensure ollama serve is active on port 11434'
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: 'Event conversation failed',
+      details: error.message
+    });
+  }
+});
+
 export default router;

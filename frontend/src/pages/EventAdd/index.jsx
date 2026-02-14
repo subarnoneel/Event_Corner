@@ -1,6 +1,6 @@
 import React, { useContext, useState } from 'react';
 import { MdOutlineEmojiEvents } from 'react-icons/md';
-import { FiEdit, FiZap } from 'react-icons/fi';
+import { FiEdit, FiZap, FiMessageCircle, FiImage } from 'react-icons/fi';
 import { toast, Toaster } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import AuthContext from '../../providers/AuthContext';
@@ -14,6 +14,7 @@ import ContactSection from './components/ContactSection';
 import VisibilitySection from './components/VisibilitySection';
 import AdditionalInfoSection from './components/AdditionalInfoSection';
 import BannerAnalyzer from './components/BannerAnalyzer';
+import ConversationalEventCreator from './components/ConversationalEventCreator';
 import { eventAddStyles } from './styles';
 import { TIMEZONES } from './constants';
 
@@ -22,6 +23,7 @@ const EventAdd = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showBannerAnalyzer, setShowBannerAnalyzer] = useState(false);
+  const [showConversationalCreator, setShowConversationalCreator] = useState(false);
 
   const {
     formData,
@@ -58,10 +60,32 @@ const EventAdd = () => {
       tags: aiData.tags && aiData.tags.length > 0 ? aiData.tags : prev.tags,
       venueName: aiData.venue_name || prev.venueName,
       venueAddress: aiData.venue_address || prev.venueAddress,
+      venueType: aiData.venue_type || prev.venueType,
       contactEmail: aiData.contact_email || prev.contactEmail,
       contactPhone: aiData.contact_phone || prev.contactPhone,
       entryFee: aiData.entry_fee || prev.entryFee,
+      requirements: aiData.requirements || prev.requirements,
+      venueCity: aiData.venue_city || prev.venueCity,
+      venueState: aiData.venue_state || prev.venueState,
+      venueCountry: aiData.venue_country || prev.venueCountry,
     }));
+
+    // Handle timeslots if provided
+    if (aiData.timeslots && Array.isArray(aiData.timeslots) && aiData.timeslots.length > 0) {
+      // Convert AI timeslots to calendar event format
+      const calendarEvents = aiData.timeslots.map((slot, idx) => ({
+        id: Date.now() + idx,
+        title: slot.title || `Session ${idx + 1}`,
+        start: slot.start,
+        end: slot.end,
+        color: slot.color || '#3b82f6'
+      }));
+      // You'll need to update events via the hook if available
+      // For now, add timeslots one by one
+      calendarEvents.forEach(event => {
+        addTimeslot(event);
+      });
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -175,6 +199,13 @@ const EventAdd = () => {
         />
       )}
 
+      {showConversationalCreator && (
+        <ConversationalEventCreator
+          onDataExtracted={handleAIDataExtracted}
+          onClose={() => setShowConversationalCreator(false)}
+        />
+      )}
+
       <div className="max-w-5xl mx-auto">
         <div className="mb-6">
           <h1 className="text-4xl font-bold text-slate-800 mb-2">
@@ -187,28 +218,52 @@ const EventAdd = () => {
         {/* Mode Selector */}
         <div className="glass-card p-6 mb-6">
           <h2 className="text-lg font-semibold text-slate-800 mb-4">Choose Creation Method</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* AI Conversational */}
             <button
               type="button"
-              onClick={() => setShowBannerAnalyzer(true)}
-              className="p-6 border-2 border-blue-300 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl hover:border-blue-500 hover:shadow-lg transition-all text-left group"
+              onClick={() => setShowConversationalCreator(true)}
+              className="p-6 border-2 border-purple-300 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl hover:border-purple-500 hover:shadow-lg transition-all text-left group"
             >
               <div className="flex items-start gap-4">
-                <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg text-white group-hover:scale-110 transition-transform">
-                  <FiZap size={24} />
+                <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg text-white group-hover:scale-110 transition-transform">
+                  <FiMessageCircle size={24} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-800 text-lg mb-1">AI-Assisted Creation</h3>
+                  <h3 className="font-bold text-slate-800 text-lg mb-1">AI Chat Assistant</h3>
                   <p className="text-slate-600 text-sm mb-2">
-                    Upload your event banner and let AI extract the details automatically
+                    Describe your event and AI will ask questions to extract all details
                   </p>
-                  <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
-                    Powered by BLIP-2
+                  <span className="inline-block px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">
+                    Conversational AI
                   </span>
                 </div>
               </div>
             </button>
 
+            {/* AI Banner Upload */}
+            <button
+              type="button"
+              onClick={() => setShowBannerAnalyzer(true)}
+              className="p-6 border-2 border-blue-300 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl hover:border-blue-500 hover:shadow-lg transition-all text-left group"
+            >
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg text-white group-hover:scale-110 transition-transform">
+                  <FiImage size={24} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 text-lg mb-1">AI Banner Analysis</h3>
+                  <p className="text-slate-600 text-sm mb-2">
+                    Upload your event banner and let AI extract the details automatically
+                  </p>
+                  <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
+                    Image Recognition
+                  </span>
+                </div>
+              </div>
+            </button>
+
+            {/* Manual Entry */}
             <div className="p-6 border-2 border-slate-300 bg-white rounded-xl text-left">
               <div className="flex items-start gap-4">
                 <div className="p-3 bg-slate-200 rounded-lg text-slate-600">
