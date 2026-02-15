@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useContext } from "react";
 import { API_ENDPOINTS } from "../../config/api";
+import AuthContext from "../../providers/AuthContext";
 import ReactMarkdown from 'react-markdown';
 import {
   FiCalendar,
@@ -19,12 +20,14 @@ import {
   FiAlertCircle,
   FiCheckCircle,
   FiChevronLeft,
-  FiChevronRight
+  FiChevronRight,
+  FiEdit3
 } from "react-icons/fi";
 
 const EventDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { userData } = useContext(AuthContext);
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -622,6 +625,26 @@ const EventDetail = () => {
           {/* Right Column - Sidebar */}
           <div className="lg:col-span-1">
             <div className="sticky top-24 space-y-6">
+              {/* Edit Event Button - Only for event creator */}
+              {userData?.user_id === event.created_by && (
+                <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-lg p-6 text-white">
+                  <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
+                    <FiEdit3 size={20} />
+                    Manage Event
+                  </h3>
+                  <p className="text-sm text-blue-100 mb-4">
+                    You can edit the event details
+                  </p>
+                  <button
+                    onClick={() => navigate(`/dashboard/organizer/events/edit/${event.id}`)}
+                    className="w-full bg-white text-blue-600 hover:bg-blue-50 font-bold py-3 px-6 rounded-lg transition shadow-md transform hover:scale-105 flex items-center justify-center gap-2"
+                  >
+                    <FiEdit3 size={18} />
+                    Edit Event
+                  </button>
+                </div>
+              )}
+
               {/* Registration Card */}
               <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-orange-200">
                 <h3 className="text-lg font-bold text-gray-900 mb-4">Register for this event</h3>

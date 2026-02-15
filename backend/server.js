@@ -1035,6 +1035,144 @@ app.post('/api/events', async (req, res) => {
   }
 });
 
+/**
+ * PUT /api/events/:eventId
+ * Update an existing event
+ */
+app.put('/api/events/:eventId', async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const {
+      title,
+      description,
+      category,
+      tags,
+      bannerImage,
+      thumbnailImage,
+      additionalImages,
+      venueType,
+      venueName,
+      eventTimezone,
+      venueAddress,
+      venueLat,
+      venueLng,
+      googlePlaceId,
+      venueCity,
+      venueState,
+      venueCountry,
+      contactEmail,
+      contactPhone,
+      website,
+      visibility,
+      requirements,
+      additional_info,
+      timeslots
+    } = req.body;
+
+    // First, verify the event exists
+    const { data: existingEvent, error: fetchError } = await supabase
+      .from('events')
+      .select('id, created_by')
+      .eq('id', eventId)
+      .single();
+
+    if (fetchError || !existingEvent) {
+      return res.status(404).json({
+        success: false,
+        error: 'Event not found'
+      });
+    }
+
+    // Update the event
+    const { data: updatedEvent, error: updateError } = await supabase
+      .from('events')
+      .update({
+        title,
+        description,
+        category,
+        tags,
+        banner_url: bannerImage,
+        thumbnail_url: thumbnailImage,
+        image_urls: additionalImages,
+        venue_type: venueType,
+        venue_name: venueName,
+        event_timezone: eventTimezone,
+        venue_address: venueAddress,
+        venue_lat: venueLat,
+        venue_lng: venueLng,
+        google_place_id: googlePlaceId,
+        venue_city: venueCity,
+        venue_state: venueState,
+        venue_country: venueCountry,
+        contact_email: contactEmail,
+        contact_phone: contactPhone,
+        website_url: website,
+        visibility,
+        requirements,
+        additional_info,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', eventId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Error updating event:', updateError);
+      return res.status(500).json({
+        success: false,
+        error: updateError.message
+      });
+    }
+
+    // Delete existing timeslots
+    const { error: deleteTimeslotsError } = await supabase
+      .from('event_timeslots')
+      .delete()
+      .eq('event_id', eventId);
+
+    if (deleteTimeslotsError) {
+      console.error('Error deleting old timeslots:', deleteTimeslotsError);
+    }
+
+    // Insert new timeslots
+    if (timeslots && timeslots.length > 0) {
+      const timeslotsToInsert = timeslots.map(slot => ({
+        event_id: eventId,
+        title: slot.title,
+        description: slot.description || '',
+        start_time: slot.start,
+        end_time: slot.end,
+        color: slot.color || '#3b82f6'
+      }));
+
+      const { error: insertTimeslotsError } = await supabase
+        .from('event_timeslots')
+        .insert(timeslotsToInsert);
+
+      if (insertTimeslotsError) {
+        console.error('Error inserting timeslots:', insertTimeslotsError);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to update timeslots'
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Event updated successfully',
+      event: updatedEvent
+    });
+
+  } catch (err) {
+    console.error('Unexpected error updating event:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
 // /**
 //  * GET /api/events/:eventId
 //  * Get event details by ID
