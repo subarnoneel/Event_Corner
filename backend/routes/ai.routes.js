@@ -4,6 +4,17 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import {
+  chatLimiter,
+  analyticsLimiter,
+  bannerUploadLimiter,
+  validateChatInput,
+  verifyFirebaseToken,
+  requireAuth,
+  requireAdmin,
+  verifyConversationAccess,
+  auditLog
+} from '../middleware/security.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -42,8 +53,96 @@ const upload = multer({
   }
 });
 
-// POST /api/ai/analyze-banner - Send to FastAPI server
-router.post('/analyze-banner', upload.single('banner'), async (req, res) => {
+// POST /api/ai/chat - Chat with AI (with context, analytics, and conversation tracking)
+router.post('/chat', verifyFirebaseToken, chatLimiter, validateChatInput, async (req, res) => {
+  const { message, context, userRole, userId, conversationId, messageHistory } = req.body;
+
+  try {
+    const axios = (await import('axios')).default;
+
+    // Log chat activity
+    auditLog('CHAT_REQUEST', req.user, {
+      role: userRole,
+      messageLength: message.length,
+      ip: req.requestInfo.ip
+    });
+
+    console.log(`📤 Chat request [${userRole || 'participant'}] ConvID: ${conversationId}: ${message.substring(0, 50)}...`);
+
+    const response = await axios.post('http://localhost:5001/chat', {
+      message: message.trim(),
+      context: context || null,
+      user_role: userRole || 'participant',
+      user_id: userId || req.user.id,
+      conversation_id: conversationId || null,
+      message_history: messageHistory || []
+    }, {
+      timeout: 30000
+    });
+
+    console.log('✅ Chat response received');
+    res.json(response.data);
+
+  } catch (error) {
+    console.error('Chat error:', error.message);
+
+    if (error.code === 'ECONNREFUSED') {
+      return res.status(503).json({
+        success: false,
+        error: 'AI server not running. Please start: python ai/ai_server.py'
+      });
+    }
+
+    if (error.response?.status === 503) {
+      return res.status(503).json({
+        success: false,
+        error: 'Ollama is not running. Please start Ollama first.'
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: 'Chat failed',
+      details: error.message
+    });
+  }
+});
+
+// GET /api/ai/analytics - Get chat analytics (admin only)
+router.get('/analytics', verifyFirebaseToken, analyticsLimiter, requireAdmin, async (req, res) => {
+  try {
+    auditLog('ANALYTICS_ACCESS', req.user, { ip: req.requestInfo.ip });
+
+    const axios = (await import('axios')).default;
+    const response = await axios.get('http://localhost:5001/analytics', { timeout: 10000 });
+    res.json(response.data);
+  } catch (error) {
+    console.error('Analytics error:', error.message);
+    res.status(500).json({ success: false, error: 'Failed to fetch analytics' });
+  }
+});
+
+// GET /api/ai/conversation/:conversationId - Get conversation history (own only)
+router.get('/conversation/:conversationId', verifyFirebaseToken, verifyConversationAccess, async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+
+    auditLog('CONVERSATION_ACCESS', req.user, {
+      conversationId,
+      ip: req.requestInfo.ip
+    });
+
+    const axios = (await import('axios')).default;
+    const response = await axios.get(`http://localhost:5001/conversations/${conversationId}`, { timeout: 10000 });
+    res.json(response.data);
+  } catch (error) {
+    console.error('Conversation retrieval error:', error.message);
+    res.status(500).json({ success: false, error: 'Failed to fetch conversation' });
+  }
+});
+
+// POST /api/ai/analyze-banner - Send to FastAPI server (with banner-specific rate limit)
+router.post('/analyze-banner', bannerUploadLimiter, upload.single('banner'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ success: false, error: 'No banner image uploaded' });
   }

@@ -1,0 +1,25 @@
+{
+  "events": [
+    {
+      "timestamp": "2026-01-22T21:22:34.550489",
+      "user_role": "super_admin",
+      "blocked": false,
+      "query": "How do I join events?",
+      "intent": "general"
+    },
+    {
+      "timestamp": "2026-01-22T21:23:00.789992",
+      "user_role": "super_admin",
+      "blocked": false,
+      "query": "How to change the code of these things?",
+      "intent": "general"
+    },
+    {
+      "timestamp": "2026-01-22T21:26:24.035980",
+      "user_role": "super_admin",
+      "blocked": false,
+      "query": "How can I add profile picture to my account?",
+      "intent": "account"
+    }
+  ]
+}

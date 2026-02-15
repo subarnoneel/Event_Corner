@@ -1,0 +1,31 @@
+{
+  "XNpG7BhULWVgXkG875WlQ946ppE2_1769095331411": {
+    "user_id": "XNpG7BhULWVgXkG875WlQ946ppE2",
+    "user_role": "super_admin",
+    "created_at": "2026-01-22T21:22:34.546838",
+    "messages": [
+      {
+        "timestamp": "2026-01-22T21:22:34.546838",
+        "user_message": "How do I join events?",
+        "ai_response": "To join events on Event Corner, follow these steps:\n\n**For Non-Super Admins:**\n\n1. Log in to your account and navigate to the **Events** section.\n2. Click on the event you're interested in joining (make sure it's open for registration or has available spots).\n3. Click the **Register Now** or **Join Event** button.\n4. Fill out the required information, including your name, email address, and any other relevant details specified by the event organizer.\n5. Review and submit your registration.\n\n**For Super Admins:**\n\n1. Log in to your account and navigate to the **Events** section.\n2. Click on the event you'd like to allow others to join (make sure it's set to \"Open Registration\" or has available spots).\n3. Click the three vertical dots next to the event name and select **Edit Event**.\n4. Scroll down to the **Registration Settings** section and toggle the switch to allow new registrations.\n5. Set any additional registration settings as desired (e.g., specifying required information, setting a waitlist, etc.).\n6. Save your changes.\n\n**Tips:**\n\n* Make sure you have the necessary permissions to manage events and registrations.\n* Be aware of event-specific rules or restrictions that may affect registration.\n* Consider setting up a waiting list for popular events to ensure fairness among registrants.\n* Regularly check event status updates to notify attendees about any changes or cancellations.\n\nDo you need further assistance?"
+      },
+      {
+        "timestamp": "2026-01-22T21:23:00.789992",
+        "user_message": "How to change the code of these things?",
+        "ai_response": "I can't assist with modifying core system functionality or customizing code. If you need to make modifications, I recommend reaching out to our technical support team or consulting the Event Corner documentation and API guides. Is there anything else I can help you with?"
+      }
+    ]
+  },
+  "XNpG7BhULWVgXkG875WlQ946ppE2_1769095562914": {
+    "user_id": "XNpG7BhULWVgXkG875WlQ946ppE2",
+    "user_role": "super_admin",
+    "created_at": "2026-01-22T21:26:24.031849",
+    "messages": [
+      {
+        "timestamp": "2026-01-22T21:26:24.031849",
+        "user_message": "How can I add profile picture to my account?",
+        "ai_response": "To add a profile picture to your Super Admin account in Event Corner, follow these steps:\n\n1. **Log in** to your account as a Super Admin.\n2. Click on your **profile picture**, which is represented by an icon of a person (usually located at the top right corner of the screen).\n3. This will take you to your **Profile Settings** page.\n4. Scroll down to the **Account Information** section.\n5. Click on the **Upload Profile Picture** button.\n6. Select a suitable image file from your computer (image formats like JPEG, PNG, or GIF are supported). Make sure the image is not too large, as it will be resized to fit within the profile picture space.\n7. Once you've uploaded the image, click **Save Changes**.\n\nNote: Ensure that the uploaded image meets Event Corner's size and format requirements (max 200x200 pixels) for optimal display. If you need help with image resizing or have any further questions, feel free to ask!\n\nAdditionally, you can also update your profile picture from the **Settings Menu**, by navigating to:\n\n* User Profile > Account Information > Profile Picture\n\nLet me know if you encounter any issues during this process!"
+      }
+    ]
+  }
+}

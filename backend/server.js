@@ -1,10 +1,16 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 import aiRoutes from './routes/ai.routes.js';
 import approvalRoutes from './routes/approval.routes.js';
 import { verifyEmailConnection } from './services/email.service.js';
+import {
+  apiLimiter,
+  verifyFirebaseToken,
+  captureRequestInfo
+} from './middleware/security.js';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -70,8 +76,11 @@ const upload = multer({
 });
 
 // Middleware
+app.use(helmet()); // Security headers
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10kb' })); // Limit JSON payload size
+app.use(apiLimiter); // Rate limiting for all API routes
+app.use(captureRequestInfo); // Capture request info for logging
 app.use(express.urlencoded({ extended: true }));
 
 // Health check endpoint
