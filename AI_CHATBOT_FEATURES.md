@@ -2,138 +2,91 @@
 
 ## ✨ Implemented Features
 
-### 1. **Conversation Context** 
-- Previous messages are remembered and sent with each request
-- Last 4 messages stored in message history for better context
+### 1. **Conversation Context** ✅
+- Previous messages remembered and sent with requests
+- Last 4 messages stored for context
 - Conversation ID tracking across sessions
-- Persistent conversation storage in `conversations.json`
-- **Frontend**: Sends `messageHistory` and `conversationId` with requests
-- **Backend**: Retrieves and builds context from previous messages
+- Persistent storage in `conversations.json`
 
-### 2. **Database Integration** 
-- Ready for future integration with real Event Corner data
-- Query system can be enhanced to fetch:
-  - Actual events matching user queries
-  - User profile information
-  - Institution data
-- Currently uses keyword-based intent detection as foundation
-- **Future Enhancement**: Call Supabase to fetch real event data and include in system prompt
+### 2. **Database Integration Ready** ✅
+- Structure ready for Supabase integration
+- Can query real Event Corner data
+- Foundation for future enhancements
 
-### 3. **Analytics & Tracking**
-- **Blocked Queries Logging**: Tracks all restricted queries per role
-- **Usage Statistics**: Records total queries, blocked rate, by role/intent
-- **Intent Detection**: Classifies queries (event_search, event_creation, account, admin, general)
-- **Endpoints**:
-  - `GET /api/ai/analytics` - Get summary statistics
-  - Shows: total queries, blocked count, block rate, breakdown by role and intent
-- **Storage**: `chat_analytics.json` with last 1000 events
+### 3. **Analytics & Tracking** ✅
+- Blocked queries logged by role
+- Usage statistics (total, blocked, by role/intent)
+- Intent classification system
+- Audit trail with timestamps
 
-### 4. **Intent Detection** (NLP Foundation)
-- Analyzes user queries to determine intent
-- 5 intent categories:
-  - **event_search**: Finding/searching for events
-  - **event_creation**: Creating new events
-  - **account**: User profile/account issues
-  - **admin**: Administrative tasks
-  - **general**: General questions
-- Keywords used: `["find event", "create event", "profile", "manage", "verify"]`
-- **Future Enhancement**: Replace keywords with actual NLP/ML model
+### 4. **Intent Detection** ✅
+- Classifies queries: event_search, event_creation, account, admin, general
+- Displayed in chat header
+- Foundation for NLP enhancement
 
-### 5. **Training Data Foundation**
-- System prompts customized per role (5 user types)
-- Guardrails built in for each role type
-- Ready for fine-tuning with Event Corner-specific documentation
-- **Future Enhancement**: 
-  - Add Event Corner docs/FAQs to system context
-  - Fine-tune Ollama model with domain-specific knowledge
-  - Create training dataset from conversation history
+### 5. **Security Features** ✅ (NEW)
+- **Rate Limiting**: 30 requests/15min per user (chat), 100/15min global
+- **Input Validation**: Message length 1-5000 chars, XSS sanitization
+- **JWT Verification**: Firebase token validation
+- **Access Control**: Users see own data only, admins see analytics
+- **Security Headers**: Helmet protection against common attacks
+- **Audit Logging**: All actions logged with user/IP/timestamp
+- **Role-based Guardrails**: Participants blocked from creating events
+
+### 6. **Markdown Rendering** ✅
+- Bold, italic, headings, lists, code blocks
+- Proper spacing between sections
+- Blockquotes and horizontal rules
+- Clean, readable formatting
+
+### 7. **Role-Based Access Control** ✅
+- 5 user types with specific permissions
+- Keyword filtering per role
+- Regex pattern matching for sophisticated detection
+- Custom rejection messages explaining limitations
 
 ---
 
 ## 📊 API Endpoints
 
-### Chat Endpoint (Enhanced)
-```javascript
-POST /api/ai/chat
-{
-  "message": "How do I create an event?",
-  "userRole": "organizer",
-  "userId": "user123",
-  "conversationId": "user123_1706001234",
-  "messageHistory": [
-    { "role": "user", "content": "Hi" },
-    { "role": "assistant", "content": "Hello!" }
-  ]
-}
-```
-
-**Response includes:**
-- `success`: boolean
-- `response`: AI reply
-- `conversation_id`: ID for this conversation
-- `intent`: Detected user intent
-
-### Analytics Endpoint
-```javascript
-GET /api/ai/analytics
-
-Response:
-{
-  "total_queries": 42,
-  "blocked_queries": 3,
-  "block_rate": "7.1%",
-  "by_role": {
-    "participant": { "total": 20, "blocked": 1 },
-    "organizer": { "total": 15, "blocked": 2 },
-    ...
-  },
-  "by_intent": {
-    "event_search": 18,
-    "event_creation": 12,
-    ...
-  },
-  "recent_events": [...]
-}
-```
-
-### Conversation History Endpoint
-```javascript
-GET /api/ai/conversation/:conversationId
-
-Response:
-{
-  "user_id": "user123",
-  "user_role": "organizer",
-  "created_at": "2026-01-22T10:30:00",
-  "messages": [
-    {
-      "timestamp": "...",
-      "user_message": "How do I...",
-      "ai_response": "You can..."
-    }
-  ]
-}
-```
+| Endpoint | Method | Auth | Rate Limit | Description |
+|----------|--------|------|-----------|-------------|
+| `/api/ai/chat` | POST | JWT | 30/15min | Send message with role context, returns AI response + intent |
+| `/api/ai/analytics` | GET | JWT+Admin | 10/hour | Returns usage stats by role and intent (admin only) |
+| `/api/ai/conversation/:id` | GET | JWT | 30/15min | Retrieve full conversation history (user isolation enforced) |
+| `/api/ai/analyze-banner` | POST | None | 50/30min | OCR analysis for event banners (existing feature) |
 
 ---
 
 ## 🔄 Data Flow
 
-1. **Frontend** sends message + metadata (role, userId, conversationId, messageHistory)
-2. **Express Route** receives and forwards to FastAPI
-3. **FastAPI Server**:
-   - Detects intent from query
-   - Retrieves previous messages for context
-   - Applies role-based guardrails
-   - Calls Ollama with system prompt + context
-   - Logs analytics (blocked/allowed, intent)
-   - Saves conversation to history
-4. **Response** includes conversation_id and detected intent
-5. **Frontend** stores message history for next request
+Frontend (token + metadata) → Express route (auth + validation + rate limit) → FastAPI server (intent detection + context retrieval + guardrails + Ollama call + analytics logging) → Response (answer + intent + conversation_id)
 
 ---
 
-## 📁 File Storage
+## � **Dependencies Added**
+
+### Backend (`package.json`)
+```json
+{
+  "dependencies": {
+    "express-rate-limit": "^7.1.5",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.0"
+  }
+}
+```
+
+**Install with:**
+```bash
+cd backend
+npm install
+npm audit fix  // Fix any vulnerabilities
+```
+
+### Frontend
+- Uses `react-markdown` (already installed)
+- No new dependencies needed
 
 ### `chat_analytics.json`
 ```json
@@ -170,37 +123,18 @@ Response:
 
 ---
 
-## 🚀 Future Enhancements
+## 🚀 Future Enhancements (Priority Order)
 
-### 1. **Database Integration**
-```python
-# Example enhancement for FastAPI
-def get_event_data(query: str, limit: int = 5):
-    # Query Supabase for real events
-    # Use LLM to match events to user query
-    pass
-```
-
-### 2. **NLP Intent Detection**
-- Replace keyword matching with ML model
-- Options: Hugging Face transformers, spaCy, or specialized NLP model
-- Train on conversation history data
-
-### 3. **Training Data Collection**
-- Use conversation history as training data
-- Build Event Corner-specific training set
-- Fine-tune Ollama model or switch to better base model
-
-### 4. **Advanced Analytics**
-- Dashboard showing conversation trends
-- Blocked query patterns by role
-- Response time metrics
-- User satisfaction tracking
-
-### 5. **Conversation Summarization**
-- Auto-summarize long conversations
-- Provide concise context to new conversations
-- Reduce token usage
+| Priority | Feature | Effort | Value | Notes |
+|----------|---------|--------|-------|-------|
+| HIGH | Typing indicator | 15 min | High | Shows "AI is typing..." for UX |
+| HIGH | Quick reply suggestions | 30 min | High | 3-4 follow-up question suggestions |
+| HIGH | Message feedback (👍👎) | 30 min | Medium | Rate response quality for analytics |
+| MEDIUM | Search conversations | 1 hour | Medium | Query past conversations by keyword |
+| MEDIUM | NLP Intent Detection | 3 hours | Medium | ML model replaces regex patterns |
+| MEDIUM | Database Migration | 4 hours | High | Move JSON to Supabase with RLS |
+| LOW | Admin dashboard | 6 hours | Low | View conversations + system health |
+| LOW | Conversation Summarization | 2 hours | Low | Auto-summarize long threads |
 
 ---
 
@@ -218,51 +152,62 @@ def get_event_data(query: str, limit: int = 5):
 
 ## ✅ Testing the Features
 
-### 1. Test Conversation Context
-```bash
-# First message
-curl -X POST http://localhost:5000/api/ai/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message":"Hi", "userRole":"participant"}'
-
-# Follow-up (should remember context)
-curl -X POST http://localhost:5000/api/ai/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "message":"Tell me more",
-    "userRole":"participant",
-    "messageHistory":[{"role":"user","content":"Hi"},{"role":"assistant","content":"Hello!"}]
-  }'
-```
-
-### 2. Test Analytics
-```bash
-curl http://localhost:5000/api/ai/analytics
-```
-
-### 3. Test Blocked Queries
-```bash
-curl -X POST http://localhost:5000/api/ai/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message":"How do I manage users?", "userRole":"participant"}'
-# Should return rejection message
-```
+- **Conversation Context**: Send multiple messages in same `conversationId` - verify history improves follow-up responses
+- **Analytics**: Call `GET /api/ai/analytics` with admin token - verify stats by role and intent
+- **Blocked Queries**: Message "How do I create an event?" as participant - verify rejection with role explanation
+- **Rate Limiting**: Send 31+ messages in 15 min - verify 429 error on 31st message
+- **Access Control**: Try accessing admin analytics without admin role - verify 403 forbidden
 
 ---
 
 ## 📝 Implementation Summary
 
-| Feature | Status | Files Modified |
-|---------|--------|-----------------|
-| Conversation Context | ✅ Complete | ai_server.py, ai.routes.js, ChatBot.jsx |
-| Analytics Logging | ✅ Complete | ai_server.py, ai.routes.js |
-| Intent Detection | ✅ Complete | ai_server.py |
-| Role-Based Guards | ✅ Complete | ai_server.py |
-| Markdown Rendering | ✅ Complete | ChatBot.jsx |
-| API Endpoints | ✅ Complete | ai_server.py, ai.routes.js |
-| Database Integration | 🟡 Ready | Needs Supabase queries |
-| NLP Enhancement | 🟡 Ready | Needs ML model integration |
-| Training Data | 🟡 Ready | Has foundation, needs dataset |
+| Feature | Status | Files Modified | Dependencies |
+|---------|--------|-----------------|-------------|
+| Conversation Context | ✅ Complete | ai_server.py, ai.routes.js, ChatBot.jsx | None |
+| Analytics Logging | ✅ Complete | ai_server.py, ai.routes.js | None |
+| Intent Detection | ✅ Complete | ai_server.py | None |
+| Role-Based Guards | ✅ Complete | ai_server.py | None |
+| Markdown Rendering | ✅ Complete | ChatBot.jsx | react-markdown |
+| API Endpoints | ✅ Complete | ai_server.py, ai.routes.js | None |
+| Rate Limiting | ✅ Complete | server.js, ai.routes.js, security.js | express-rate-limit |
+| Input Validation | ✅ Complete | security.js, ai.routes.js | None |
+| JWT Verification | ✅ Complete | security.js, ChatBot.jsx | jsonwebtoken |
+| Access Control | ✅ Complete | security.js, ai.routes.js | None |
+| Security Headers | ✅ Complete | server.js | helmet |
+| Audit Logging | ✅ Complete | security.js, ai.routes.js | None |
+| Database Integration | 🟡 Ready | ai_server.py (functions defined) | None (uses Supabase) |
+| NLP Enhancement | 🟡 Ready | ai_server.py (foundation) | Would need ML library |
+
+---
+
+## 📂 Files Created/Modified
+
+### **New Files Created:**
+- `backend/middleware/security.js` - All security functions (rate limit, validation, auth, audit)
+- `AI_CHATBOT_FEATURES.md` - This documentation
+- `CHATBOT_SECURITY.md` - Security implementation details
+- `SECURITY_COMPATIBILITY.md` - Compatibility verification
+
+### **Files Modified:**
+- `backend/package.json` - Added 3 security dependencies
+- `backend/server.js` - Integrated security middleware & Helmet
+- `backend/ai/ai_server.py` - Enhanced with context, analytics, intent detection, stricter guards
+- `backend/routes/ai.routes.js` - Applied security, added endpoints, imported middleware
+- `frontend/src/components/ChatBot.jsx` - Send JWT tokens, improved markdown rendering, show intent
+
+---
+
+## 🔄 Key Changes Made
+
+| Layer | Change | Impact |
+|-------|--------|--------|
+| **Express Server** | Added Helmet, payload limits, global rate limiter, audit middleware | All endpoints now hardened |
+| **Chat Route** | Added token verification → rate limiting → input validation middleware chain | Secure processing pipeline |
+| **Analytics Route** | Added admin-only access control | Sensitive data protected |
+| **Frontend** | Now sends Firebase token + role/userId context in headers | Backend can verify requests |
+| **FastAPI Server** | Added context retrieval, intent detection, stricter guardrails, audit logging | Smarter + safer responses |
+| **Storage** | Moved to JSON files (ready for Supabase migration) | Persistent across restarts |
 
 ---
 
