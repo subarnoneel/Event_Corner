@@ -608,6 +608,25 @@ async def crawl_website(request: CrawlRequest):
         print(f"❌ Crawl error: {str(e)}", file=sys.stderr)
         raise HTTPException(status_code=500, detail=f"Crawl failed: {str(e)}")
 
+@app.post("/fetch-html")
+async def fetch_html(request: CrawlRequest):
+    """
+    Fetch raw HTML content from a URL (using curl_cffi via crawler.py)
+    """
+    try:
+        print(f"📥 Fetching HTML for: {request.url}", file=sys.stderr)
+        html_content = crawler.fetch_page(request.url)
+        
+        if not html_content:
+             raise HTTPException(status_code=400, detail="Failed to fetch page content")
+             
+        print(f"✅ Fetch complete: {len(html_content)} chars", file=sys.stderr)
+        return JSONResponse(content={"success": True, "html": html_content})
+        
+    except Exception as e:
+        print(f"❌ Fetch HTML error: {str(e)}", file=sys.stderr)
+        raise HTTPException(status_code=500, detail=f"Fetch failed: {str(e)}")
+
 if __name__ == "__main__":
     print("\n🌟 Banner Analyzer FastAPI Server", file=sys.stderr)
     print("Port: 5001", file=sys.stderr)

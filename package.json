@@ -8,7 +8,8 @@
     "dev:frontend": "cd frontend && npm run dev",
     "start": "node start.js",
     "start:backend": "cd backend && npm start",
-    "start:frontend": "cd frontend && npm run build"
+    "start:frontend": "cd frontend && npm run build",
+    "build": "cd frontend && npm run build"
   },
   "keywords": [
     "events",

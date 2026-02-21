@@ -11,18 +11,19 @@ const ExploreEvents = () => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("active");
   const [searchQuery, setSearchQuery] = useState("");
   const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchEvents();
-  }, [filter, searchQuery]);
+  }, [filter, statusFilter, searchQuery]);
 
   const fetchEvents = async () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Build query parameters
       const params = new URLSearchParams();
       if (filter !== "all") {
@@ -31,13 +32,13 @@ const ExploreEvents = () => {
       if (searchQuery) {
         params.append('search', searchQuery);
       }
-      params.append('status', 'active');
+      params.append('status', statusFilter);
       params.append('visibility', 'public');
       params.append('limit', '100');
-      
+
       const url = `${API_ENDPOINTS.EVENTS}${params.toString() ? '?' + params.toString() : ''}`;
       console.log('Fetching events from:', url);
-      
+
       const response = await fetch(url);
 
       if (!response.ok) {
@@ -46,7 +47,7 @@ const ExploreEvents = () => {
 
       const data = await response.json();
       console.log('API Response:', data);
-      
+
       if (data.success && Array.isArray(data.events)) {
         setEvents(data.events);
       } else {
@@ -63,16 +64,16 @@ const ExploreEvents = () => {
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
     });
   };
 
   const filteredEvents = events.filter((event) => {
     const matchesSearch = event.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         event.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      event.description?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter = filter === "all" || event.category === filter;
     return matchesSearch && matchesFilter;
   });
@@ -88,7 +89,7 @@ const ExploreEvents = () => {
 
         {/* Search and Filter */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Search Input */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -127,6 +128,22 @@ const ExploreEvents = () => {
                 <option value="other">Other</option>
               </select>
             </div>
+
+            {/* Status Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Filter by Status
+              </label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              >
+                <option value="active">Active Events</option>
+                <option value="completed">Past Events</option>
+                <option value="all">All Statuses</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -145,7 +162,7 @@ const ExploreEvents = () => {
         ) : error ? (
           <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
             <p className="text-red-600">Error loading events: {error}</p>
-            <button 
+            <button
               onClick={fetchEvents}
               className="mt-3 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
             >
@@ -179,7 +196,7 @@ const ExploreEvents = () => {
                   <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
                     {event.title || 'Untitled Event'}
                   </h3>
-                  
+
                   {event.description && (
                     <p className="text-gray-600 text-sm mb-4 line-clamp-2">
                       {event.description}
@@ -191,7 +208,7 @@ const ExploreEvents = () => {
                       <FiClock className="mr-2 flex-shrink-0" size={16} />
                       <span>{formatDate(event.created_at)}</span>
                     </div>
-                    
+
                     {event.venue_name && (
                       <div className="flex items-center text-sm text-gray-600">
                         <FiMapPin className="mr-2 flex-shrink-0" size={16} />
@@ -209,7 +226,7 @@ const ExploreEvents = () => {
                   </div>
 
                   {/* Action Button */}
-                  <button 
+                  <button
                     onClick={() => navigate(`/event/${event.id}`)}
                     className="w-full flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
                   >
@@ -227,8 +244,8 @@ const ExploreEvents = () => {
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">No events found</h3>
             <p className="text-gray-600">
-              {searchQuery || filter !== "all" 
-                ? "Try adjusting your search or filter criteria" 
+              {searchQuery || filter !== "all"
+                ? "Try adjusting your search or filter criteria"
                 : "No events are currently available"}
             </p>
           </div>

@@ -18,6 +18,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import crypto from 'crypto';
+import { initScheduler } from './cron/scheduler.js';
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -29,6 +30,9 @@ dotenv.config();
 // Initialize Express app
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Initialize Scheduler
+initScheduler();
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -1300,7 +1304,7 @@ app.get('/api/events', async (req, res) => {
     const {
       category,
       visibility,
-      status = 'active',
+      status,
       created_by,
       institution_id,
       search,
@@ -1311,7 +1315,7 @@ app.get('/api/events', async (req, res) => {
     const { data, error } = await supabase.rpc('get_events', {
       p_category: category || null,
       p_visibility: visibility || null,
-      p_status: status,
+      p_status: status === 'all' ? null : (status || 'active'),
       p_created_by: created_by || null,
       p_institution_id: institution_id || null,
       p_search: search || null,

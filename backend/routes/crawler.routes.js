@@ -5,6 +5,8 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+import { performBulkCrawl } from '../services/crawler.service.js';
+
 const router = express.Router();
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
 const AI_SERVER_URL = 'http://localhost:5001';
@@ -180,108 +182,8 @@ router.post('/bulk-crawl', async (req, res) => {
             return res.status(400).json({ success: false, error: 'User ID is required' });
         }
 
-        // 1. Fetch sources
-        const { data: sources, error: sourceError } = await supabase
-            .from('crawler_sources')
-            .select('url')
-            .eq('created_by', user_id);
-
-        if (sourceError || !sources || sources.length === 0) {
-            return res.json({ success: true, message: 'No sources found to crawl.', count: 0 });
-        }
-
-        let totalSaved = 0;
-        const results = [];
-
-        // 2. Iterate and Crawl
-        for (const source of sources) {
-            const url = source.url;
-            console.log(`📦 Bulk processing: ${url}`);
-
-            try {
-                // Call AI Server directly
-                const crawlResponse = await axios.post(`${AI_SERVER_URL}/crawl`, { url });
-                let events = crawlResponse.data?.data?.events || [];
-
-                // 3. Apply Limit
-                if (events.length > limit) {
-                    events = events.slice(0, limit);
-                }
-
-                // 4. Save events (Simplified version of crawl-and-draft logic)
-                let savedForSource = 0;
-                for (const event of events) {
-                    // Basic check if title exists to avoid junk
-                    if (!event.title) continue;
-
-                    // Description generation
-                    let description = event.description || event.title;
-                    try {
-                        const aiPrompt = `Write a short description for event "${event.title}".`;
-                        const chatResponse = await axios.post(`${AI_SERVER_URL}/chat`, { message: aiPrompt });
-                        if (chatResponse.data?.response) description = chatResponse.data.response;
-                    } catch (e) {
-                        // Ignore AI error
-                    }
-
-                    // Insert Event
-                    const { data: newEvent, error: insertError } = await supabase
-                        .from('events')
-                        .insert({
-                            title: event.title,
-                            description: description,
-                            category: 'competition',
-                            venue_type: 'online',
-                            venue_name: event.platform || 'Online',
-                            status: 'draft',
-                            created_by: user_id,
-                            website_url: event.url || url,
-                            additional_info: { crawled_from: url, platform: event.platform }
-                        })
-                        .select()
-                        .single();
-
-                    if (!insertError && newEvent) {
-                        // Insert Timeslot
-                        try {
-                            const startDate = new Date(event.start_time);
-                            // Validate date
-                            if (isNaN(startDate.getTime())) {
-                                // Fallback to tomorrow noon
-                                const fallbackDate = new Date();
-                                fallbackDate.setDate(fallbackDate.getDate() + 1);
-                                fallbackDate.setHours(12, 0, 0, 0);
-                                startDate.setTime(fallbackDate.getTime());
-                            }
-
-                            const endDate = new Date(startDate.getTime() + (2 * 60 * 60 * 1000)); // +2h
-
-                            await supabase.from('event_timeslots').insert({
-                                event_id: newEvent.id,
-                                title: event.title,
-                                start_time: startDate.toISOString(),
-                                end_time: endDate.toISOString()
-                            });
-                            savedForSource++;
-                            totalSaved++;
-                        } catch (tsErr) {
-                            console.error('Timeslot error:', tsErr);
-                        }
-                    }
-                }
-                results.push({ url, found: events.length, saved: savedForSource });
-
-            } catch (err) {
-                console.error(`Failed to crawl ${url}:`, err.message);
-                results.push({ url, error: err.message });
-            }
-        }
-
-        res.json({
-            success: true,
-            message: `Bulk crawl complete. Processed ${sources.length} sources, saved ${totalSaved} events.`,
-            results
-        });
+        const result = await performBulkCrawl(user_id, limit);
+        res.json(result);
 
     } catch (err) {
         console.error('Bulk crawl error:', err);
