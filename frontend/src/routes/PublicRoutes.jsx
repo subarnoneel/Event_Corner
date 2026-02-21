@@ -11,6 +11,7 @@ import RoleAssignment from "../pages/dashboard/superadmin/RoleAssignment";
 import Admin from "../pages/dashboard/admin/Admin";
 import AdminProfile from "../pages/dashboard/admin/AdminProfile";
 import AdminUserManagement from "../pages/dashboard/admin/AdminUserManagement";
+import CrawlerPage from "../pages/dashboard/admin/CrawlerPage";
 import Institution from "../pages/dashboard/institution/Institution";
 import InstitutionProfile from "../pages/dashboard/institution/InstitutionProfile";
 import InstitutionMyEvents from "../pages/dashboard/institution/MyEvents";
@@ -90,6 +91,10 @@ const PublicRoutes = createBrowserRouter([
                         path: "users",
                         element: <AdminUserManagement />
                     },
+                    {
+                        path: "crawler",
+                        element: <CrawlerPage />
+                    },
                 ]
             },
             {
@@ -152,11 +157,11 @@ const PublicRoutes = createBrowserRouter([
             },
             {
                 path: "/dashboard/organizer/events/edit/:id",
-                element: <ProtectedRoute allowedRoles={['organizer', 'institution']}><EventEdit /></ProtectedRoute>,
+                element: <ProtectedRoute allowedRoles={['organizer', 'institution', 'admin', 'super_admin']}><EventEdit /></ProtectedRoute>,
             },
             {
                 path: "/event/:id",
-                element: <EventDetail/>
+                element: <EventDetail />
             },
         ],
     },

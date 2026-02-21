@@ -18,6 +18,7 @@ import ollama
 from datetime import datetime
 import json
 from pathlib import Path
+import crawler
 
 app = FastAPI(title="Banner Analyzer API", version="1.0.0")
 
@@ -523,6 +524,7 @@ Remember: Respond ONLY with valid JSON, no markdown, no explanation text outside
             raise HTTPException(status_code=503, detail="Ollama is not running on port 11434")
         raise HTTPException(status_code=500, detail=f"Event conversation failed: {error_msg}")
 
+<<<<<<< HEAD
 @app.get("/analytics")
 async def get_analytics():
     """Get chat analytics (blocked queries, user patterns, intents)"""
@@ -582,6 +584,29 @@ async def get_conversation(conversation_id: str):
     except Exception as e:
         print(f"⚠️  Conversation retrieval failed: {e}", file=sys.stderr)
         return {"error": str(e)}
+
+class CrawlRequest(BaseModel):
+    url: str
+
+@app.post("/crawl")
+async def crawl_website(request: CrawlRequest):
+    """
+    Crawl a website and extract event information
+    """
+    try:
+        print(f"🕷️ Crawling URL: {request.url}", file=sys.stderr)
+        
+        result = crawler.extract_events(request.url)
+        
+        if "error" in result:
+             raise HTTPException(status_code=400, detail=result["error"])
+             
+        print(f"✅ Crawl complete for {request.url}", file=sys.stderr)
+        return JSONResponse(content={"success": True, "data": result})
+        
+    except Exception as e:
+        print(f"❌ Crawl error: {str(e)}", file=sys.stderr)
+        raise HTTPException(status_code=500, detail=f"Crawl failed: {str(e)}")
 
 if __name__ == "__main__":
     print("\n🌟 Banner Analyzer FastAPI Server", file=sys.stderr)

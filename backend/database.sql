@@ -146,3 +146,20 @@ app.get("/api/events/:id", async (req, res) => {
     });
   }
 });
+
+-- ============================================================================
+-- CRAWLER SOURCES TABLE
+-- Stores URLs for bulk crawling
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS crawler_sources (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    url TEXT UNIQUE NOT NULL,
+    name VARCHAR(100), -- Optional name (e.g., "Codeforces")
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX idx_crawler_sources_created_by ON crawler_sources(created_by);
+

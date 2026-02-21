@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 import aiRoutes from './routes/ai.routes.js';
+import crawlerRoutes from './routes/crawler.routes.js';
 import approvalRoutes from './routes/approval.routes.js';
 import { verifyEmailConnection } from './services/email.service.js';
 import {
@@ -105,6 +106,11 @@ app.get('/api/test-db', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// Routes
+app.use('/api/ai', aiRoutes);
+app.use('/api/crawler', crawlerRoutes);
+app.use('/api/approval', approvalRoutes);
 
 // ============================================================================
 // AUTHENTICATION ROUTES
@@ -1075,7 +1081,8 @@ app.put('/api/events/:eventId', async (req, res) => {
       visibility,
       requirements,
       additional_info,
-      timeslots
+      timeslots,
+      status // Add status to destructured body
     } = req.body;
 
     // First, verify the event exists
@@ -1119,6 +1126,7 @@ app.put('/api/events/:eventId', async (req, res) => {
         visibility,
         requirements,
         additional_info,
+        status: status, // Update status if provided
         updated_at: new Date().toISOString()
       })
       .eq('id', eventId)
@@ -1215,6 +1223,67 @@ app.get('/api/events/:eventId', async (req, res) => {
     });
   } catch (err) {
     console.error('Unexpected error fetching event:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+
+/**
+ * DELETE /api/events/:eventId
+ * Delete an event
+ */
+app.delete('/api/events/:eventId', async (req, res) => {
+  try {
+    const { eventId } = req.params;
+
+    // First, verify the event exists
+    const { data: existingEvent, error: fetchError } = await supabase
+      .from('events')
+      .select('id')
+      .eq('id', eventId)
+      .single();
+
+    if (fetchError || !existingEvent) {
+      return res.status(404).json({
+        success: false,
+        error: 'Event not found'
+      });
+    }
+
+    // Delete related timeslots first (if not cascading)
+    const { error: timeslotError } = await supabase
+      .from('event_timeslots')
+      .delete()
+      .eq('event_id', eventId);
+
+    if (timeslotError) {
+      console.error('Error deleting timeslots:', timeslotError);
+    }
+
+    // Delete the event
+    const { error: deleteError } = await supabase
+      .from('events')
+      .delete()
+      .eq('id', eventId);
+
+    if (deleteError) {
+      console.error('Error deleting event:', deleteError);
+      return res.status(500).json({
+        success: false,
+        error: deleteError.message
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Event deleted successfully'
+    });
+
+  } catch (err) {
+    console.error('Unexpected error deleting event:', err);
     res.status(500).json({
       success: false,
       error: 'Internal server error'
