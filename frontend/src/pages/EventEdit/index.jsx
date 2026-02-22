@@ -22,6 +22,7 @@ const EventEdit = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const {
     formData,
@@ -139,10 +140,6 @@ const EventEdit = () => {
       return;
     }
 
-    if (!window.confirm("Are you sure you want to publish this event? It will be visible to everyone.")) {
-      return;
-    }
-
     setIsSubmitting(true);
     try {
       // First save any changes
@@ -157,27 +154,35 @@ const EventEdit = () => {
     }
   };
 
-  const handleDelete = async () => {
-    if (!window.confirm("Are you sure you want to delete this draft? This action cannot be undone.")) {
-      return;
-    }
+  const confirmDelete = () => {
+    setShowDeleteConfirm(true);
+  };
 
+  const handleDelete = async () => {
+    const isDraft = formData.status === 'draft';
+    
+    setShowDeleteConfirm(false);
     setIsSubmitting(true);
+    
     try {
       const response = await fetch(`${API_ENDPOINTS.EVENTS}/${id}`, {
         method: 'DELETE'
       });
 
-      if (response.ok) {
-        toast.success("Draft deleted");
-        // Navigate back to where they came from (e.g. Crawler page or Events list)
-        navigate(-1);
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        toast.success(isDraft ? "Draft deleted successfully" : "Event deleted successfully");
+        // Navigate to home page
+        setTimeout(() => {
+          navigate('/');
+        }, 1000);
       } else {
-        throw new Error("Failed to delete");
+        throw new Error(result.error || "Failed to delete");
       }
     } catch (error) {
       console.error(error);
-      toast.error("Failed to delete draft");
+      toast.error(error.message || "Failed to delete event");
     } finally {
       setIsSubmitting(false);
     }
@@ -292,6 +297,44 @@ const EventEdit = () => {
     <div className="min-h-screen p-6 event-add-page">
       <Toaster position="top-right" />
 
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl animate-fade-in">
+            <div className="text-center mb-6">
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
+                <svg className="h-8 w-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                {formData.status === 'draft' ? 'Delete Draft?' : 'Delete Event?'}
+              </h3>
+              <p className="text-gray-600">
+                {formData.status === 'draft' 
+                  ? "Are you sure you want to delete this draft? This action cannot be undone."
+                  : "Are you sure you want to delete this event? This action cannot be undone and will remove the event permanently."}
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={isSubmitting}
+                className="flex-1 px-6 py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {isSubmitting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-5xl mx-auto">
         <div className="mb-6">
           <h1 className="text-4xl font-bold text-slate-800 mb-2">
@@ -356,17 +399,15 @@ const EventEdit = () => {
 
           <div className="flex gap-4 justify-between w-full mt-8 border-t pt-6">
             <div className="flex gap-4">
-              {/* Delete/Discard Button - Only for Drafts */}
-              {formData.status === 'draft' && (
-                <button
-                  type="button"
-                  onClick={handleDelete}
-                  disabled={isSubmitting}
-                  className="px-6 py-3 bg-red-100 text-red-700 rounded-xl font-semibold hover:bg-red-200 transition-colors flex items-center gap-2"
-                >
-                  Delete Draft
-                </button>
-              )}
+              {/* Delete Button - Available for all events */}
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={isSubmitting}
+                className="px-6 py-3 bg-red-100 text-red-700 rounded-xl font-semibold hover:bg-red-200 transition-colors flex items-center gap-2 disabled:opacity-50"
+              >
+                {formData.status === 'draft' ? 'Delete Draft' : 'Delete Event'}
+              </button>
             </div>
 
             <div className="flex gap-4">
@@ -405,6 +446,21 @@ const EventEdit = () => {
       </div>
 
       <style jsx>{eventAddStyles}</style>
+      <style jsx>{`
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.2s ease-out;
+        }
+      `}</style>
     </div>
   );
 };

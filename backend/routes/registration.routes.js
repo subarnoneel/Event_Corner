@@ -379,6 +379,153 @@ router.get('/:eventId/status/:userId', async (req, res) => {
     }
 });
 
+/**
+ * GET /api/registration/user/:userId/events
+ * Get all registered events for a user
+ * Query params: status (optional) - filter by registration status (pending, approved, rejected)
+ */
+router.get('/user/:userId/events', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { status } = req.query; // Optional filter: 'approved', 'pending', 'rejected'
+
+        console.log(`Fetching registrations for user: ${userId}, status filter: ${status || 'all'}`);
+
+        // Build query for registrations with event details
+        let query = supabase
+            .from('event_participants')
+            .select(`
+                id,
+                event_id,
+                form_data,
+                team_name,
+                status,
+                submitted_at,
+                reviewed_at,
+                rejection_reason,
+                events (
+                    id,
+                    title,
+                    description,
+                    category,
+                    banner_url,
+                    thumbnail_url,
+                    venue_name,
+                    venue_type,
+                    venue_address,
+                    created_at,
+                    status
+                )
+            `)
+            .eq('user_id', userId);
+        
+        // Apply status filter if provided (before order)
+        if (status && status !== 'all') {
+            query = query.eq('status', status);
+        }
+        
+        // Apply ordering last
+        query = query.order('submitted_at', { ascending: false });
+        
+        const { data: registrations, error } = await query;
+
+        if (error) {
+            console.error('Error fetching user registrations:', error);
+            return res.status(400).json({
+                success: false,
+                error: error.message
+            });
+        }
+
+        console.log(`Found ${registrations?.length || 0} raw registrations`);
+
+        // If no registrations, return empty array early
+        if (!registrations || registrations.length === 0) {
+            return res.json({
+                success: true,
+                registrations: [],
+                count: 0
+            });
+        }
+
+        // Get timeslots for events to determine start dates
+        const eventIds = registrations.map(r => r.event_id).filter(id => id); // Filter out null/undefined
+        
+        let timeslots = [];
+        if (eventIds.length > 0) {
+            const { data: timeslotsData, error: timeslotsError } = await supabase
+                .from('event_timeslots')
+                .select('event_id, start, end')
+                .in('event_id', eventIds)
+                .order('start', { ascending: true });
+
+            if (timeslotsError) {
+                console.error('Error fetching timeslots:', timeslotsError);
+            } else {
+                timeslots = timeslotsData || [];
+            }
+        }
+
+        // Map timeslots to events
+        const timeslotsByEvent = {};
+        if (timeslots) {
+            timeslots.forEach(slot => {
+                if (!timeslotsByEvent[slot.event_id]) {
+                    timeslotsByEvent[slot.event_id] = [];
+                }
+                timeslotsByEvent[slot.event_id].push(slot);
+            });
+        }
+
+        // Flatten and enrich the registration data
+        const enrichedRegistrations = registrations
+            .filter(reg => reg.events) // Only include registrations with valid event data
+            .map(reg => {
+                const event = reg.events;
+                const eventTimeslots = timeslotsByEvent[reg.event_id] || [];
+                const startDate = eventTimeslots.length > 0 ? eventTimeslots[0].start : event.created_at;
+
+                return {
+                    id: reg.id,
+                    event_id: reg.event_id,
+                    event_title: event.title,
+                    title: event.title,
+                    description: event.description,
+                    category: event.category,
+                    banner_url: event.banner_url,
+                    thumbnail_url: event.thumbnail_url,
+                    venue_name: event.venue_name,
+                    venue_type: event.venue_type,
+                    venue_address: event.venue_address,
+                    event_status: event.status,
+                    event_start_date: startDate,
+                    start_date: startDate,
+                    status: reg.status,
+                    registered_at: reg.submitted_at,
+                    submitted_at: reg.submitted_at,
+                    reviewed_at: reg.reviewed_at,
+                    rejection_reason: reg.rejection_reason,
+                    team_name: reg.team_name,
+                    form_data: reg.form_data
+                };
+            });
+
+        console.log(`Found ${enrichedRegistrations.length} registrations for user ${userId}`);
+
+        res.json({
+            success: true,
+            registrations: enrichedRegistrations,
+            count: enrichedRegistrations.length
+        });
+    } catch (err) {
+        console.error('Unexpected error:', err);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error'
+        });
+    }
+});
+
 // ============================================================================
 // ORGANIZER PARTICIPANT MANAGEMENT ROUTES
 // ============================================================================

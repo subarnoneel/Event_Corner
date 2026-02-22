@@ -5,7 +5,9 @@ import {
   FiUser,
   FiLogOut,
   FiMenu,
-  FiX
+  FiX,
+  FiCheckCircle,
+  FiBookmark
 } from 'react-icons/fi';
 
 const Participant = () => {
@@ -26,12 +28,28 @@ const Participant = () => {
       label: 'Profile Dashboard',
       icon: FiUser,
       description: 'Manage your participant profile'
+    },
+    {
+      id: 'registered',
+      path: `/participant/registered-events`,
+      label: 'Registered Events',
+      icon: FiCheckCircle,
+      description: 'View your registered events'
+    },
+    {
+      id: 'bookmarks',
+      path: `/participant/bookmarked-events`,
+      label: 'Bookmarked Events',
+      icon: FiBookmark,
+      description: 'View your saved events'
     }
   ];
 
   const getCurrentMenuItem = () => {
     const currentPath = location.pathname;
     if (currentPath.includes('/profile')) return menuItems[0];
+    if (currentPath.includes('/registered-events')) return menuItems[1];
+    if (currentPath.includes('/bookmarked-events')) return menuItems[2];
     return menuItems[0]; // Default to profile
   };
 

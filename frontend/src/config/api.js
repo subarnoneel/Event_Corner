@@ -67,6 +67,9 @@ export const API_ENDPOINTS = {
   REGISTRATION_SUBMIT: (eventId) => `${API_BASE_URL}/api/registration/${eventId}/register`,
   REGISTRATION_STATUS: (eventId, userId) => `${API_BASE_URL}/api/registration/${eventId}/status/${userId}`,
   
+  // Participant's Registered Events
+  USER_REGISTERED_EVENTS: (userId) => `${API_BASE_URL}/api/registration/user/${userId}/events`,
+  
   // Organizer Participant Management
   ORGANIZER_EVENTS_WITH_PARTICIPANTS: (organizerId) => `${API_BASE_URL}/api/registration/organizer/${organizerId}/events`,
   ORGANIZER_PENDING_PARTICIPANTS: (organizerId) => `${API_BASE_URL}/api/registration/organizer/${organizerId}/pending`,

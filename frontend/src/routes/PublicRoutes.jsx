@@ -23,6 +23,8 @@ import ParticipantManagement from "../pages/dashboard/organizer/ParticipantManag
 import RegistrationFormBuilder from "../pages/dashboard/organizer/RegistrationFormBuilder";
 import Participant from "../pages/dashboard/participant/Participant";
 import ParticipantProfile from "../pages/dashboard/participant/ParticipantProfile";
+import RegisteredEvents from "../pages/dashboard/participant/RegisteredEvents";
+import BookmarkedEvents from "../pages/dashboard/participant/BookmarkedEvents";
 import MainLayout from "../components/MainLayout";
 import ProtectedRoute from "./PrivateRoutes";
 import EventAdd from "../pages/EventAdd";
@@ -159,6 +161,14 @@ const PublicRoutes = createBrowserRouter([
                     {
                         path: "profile",
                         element: <ParticipantProfile />
+                    },
+                    {
+                        path: "registered-events",
+                        element: <RegisteredEvents />
+                    },
+                    {
+                        path: "bookmarked-events",
+                        element: <BookmarkedEvents />
                     },
                 ]
             },
