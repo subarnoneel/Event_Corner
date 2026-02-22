@@ -4,16 +4,17 @@ import jwt from 'jsonwebtoken';
 const FIREBASE_SECRET = process.env.FIREBASE_SECRET || 'your-firebase-secret';
 
 // ============ RATE LIMITING ============
-// General API rate limit: 100 requests per 15 minutes
+// General API rate limit: 500 requests per 15 minutes (more lenient for development)
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  max: 500, // Increased from 100 to 500
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => {
-    // Don't rate limit health checks or file uploads
-    return req.path === '/api/health' || req.path === '/api/ai/analyze-banner';
+    // Skip rate limiting for common read operations and health checks
+    const skipPaths = ['/api/health', '/api/ai/analyze-banner', '/api/events', '/api/auth/login'];
+    return skipPaths.some(path => req.path.startsWith(path));
   }
 });
 

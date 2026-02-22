@@ -61,6 +61,25 @@ export const API_ENDPOINTS = {
   AI_ANALYZE_BANNER: `${API_BASE_URL}/api/ai/analyze-banner`,
   AI_STATUS: `${API_BASE_URL}/api/ai/status`,
   AI_CREATE_EVENT_CONVERSATION: `${API_BASE_URL}/api/ai/create-event-conversation`,
+
+  // Event Registration System
+  REGISTRATION_CONFIG: (eventId) => `${API_BASE_URL}/api/registration/${eventId}/config`,
+  REGISTRATION_SUBMIT: (eventId) => `${API_BASE_URL}/api/registration/${eventId}/register`,
+  REGISTRATION_STATUS: (eventId, userId) => `${API_BASE_URL}/api/registration/${eventId}/status/${userId}`,
+  
+  // Organizer Participant Management
+  ORGANIZER_EVENTS_WITH_PARTICIPANTS: (organizerId) => `${API_BASE_URL}/api/registration/organizer/${organizerId}/events`,
+  ORGANIZER_PENDING_PARTICIPANTS: (organizerId) => `${API_BASE_URL}/api/registration/organizer/${organizerId}/pending`,
+  ORGANIZER_APPROVED_PARTICIPANTS: (organizerId) => `${API_BASE_URL}/api/registration/organizer/${organizerId}/approved`,
+  
+  // Participant Actions
+  PARTICIPANT_APPROVE: (participantId) => `${API_BASE_URL}/api/registration/participants/${participantId}/approve`,
+  PARTICIPANT_REJECT: (participantId) => `${API_BASE_URL}/api/registration/participants/${participantId}/reject`,
+  PARTICIPANT_DETAILS: (participantId) => `${API_BASE_URL}/api/registration/participants/${participantId}`,
+  
+  // Bulk Email & Export
+  EVENT_EMAIL_PARTICIPANTS: (eventId) => `${API_BASE_URL}/api/registration/events/${eventId}/email-participants`,
+  EVENT_EXPORT_PARTICIPANTS: (eventId) => `${API_BASE_URL}/api/registration/events/${eventId}/export`,
 };
 
 export default API_BASE_URL;

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
+import { Link } from 'react-router-dom';
 import AuthContext from '../../../providers/AuthContext';
 import { API_ENDPOINTS } from '../../../config/api';
-import { FiCalendar, FiMapPin, FiClock, FiEdit, FiTrash2, FiEye } from 'react-icons/fi';
+import { FiCalendar, FiMapPin, FiClock, FiEdit, FiTrash2, FiEye, FiUsers, FiClipboard } from 'react-icons/fi';
 
 const MyEvents = () => {
   const { user, userData } = useContext(AuthContext);
@@ -191,15 +192,30 @@ const MyEvents = () => {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-2 pt-4 border-t border-gray-100">
-                  <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium">
+                <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
+                  <Link 
+                    to={`/event/${event.id || event.event_id}`}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
+                  >
                     <FiEye size={16} />
                     View
-                  </button>
-                  <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors text-sm font-medium">
-                    <FiEdit size={16} />
-                    Edit
-                  </button>
+                  </Link>
+                  <Link 
+                    to={`/organizer/registration-form/${event.id || event.event_id}`}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors text-sm font-medium"
+                    title="Setup or edit registration form"
+                  >
+                    <FiClipboard size={16} />
+                    Form
+                  </Link>
+                  <Link 
+                    to={`/organizer/participants?event_id=${event.id || event.event_id}`}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors text-sm font-medium"
+                    title="Manage participants"
+                  >
+                    <FiUsers size={16} />
+                    Participants
+                  </Link>
                 </div>
               </div>
             </div>

@@ -6,7 +6,9 @@ import {
   FiLogOut,
   FiMenu,
   FiX,
-  FiCalendar
+  FiCalendar,
+  FiUsers,
+  FiClipboard
 } from 'react-icons/fi';
 
 const Organizer = () => {
@@ -34,6 +36,13 @@ const Organizer = () => {
       label: 'My Events',
       icon: FiCalendar,
       description: 'View and manage your events'
+    },
+    {
+      id: 'participants',
+      path: '/organizer/participants',
+      label: 'Participants',
+      icon: FiUsers,
+      description: 'Manage event registrations'
     }
   ];
 
@@ -41,6 +50,8 @@ const Organizer = () => {
     const currentPath = location.pathname;
     if (currentPath.includes('/profile')) return menuItems[0];
     if (currentPath.includes('/events')) return menuItems[1];
+    if (currentPath.includes('/participants')) return menuItems[2];
+    if (currentPath.includes('/registration-form')) return { label: 'Registration Form', description: 'Build event registration form' };
     return menuItems[0]; // Default to profile
   };
 

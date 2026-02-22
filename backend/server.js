@@ -6,6 +6,7 @@ import { createClient } from '@supabase/supabase-js';
 import aiRoutes from './routes/ai.routes.js';
 import crawlerRoutes from './routes/crawler.routes.js';
 import approvalRoutes from './routes/approval.routes.js';
+import registrationRoutes from './routes/registration.routes.js';
 import { verifyEmailConnection } from './services/email.service.js';
 import {
   apiLimiter,
@@ -115,6 +116,7 @@ app.get('/api/test-db', async (req, res) => {
 app.use('/api/ai', aiRoutes);
 app.use('/api/crawler', crawlerRoutes);
 app.use('/api/approval', approvalRoutes);
+app.use('/api/registration', registrationRoutes);
 
 // ============================================================================
 // AUTHENTICATION ROUTES

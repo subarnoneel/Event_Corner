@@ -8,7 +8,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
 } from "firebase/auth";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import AuthContext from "./AuthContext";
 import axios from "axios";
 import { auth } from "../../firebase.init.js";
@@ -20,6 +20,9 @@ const AuthProvider = ({ children }) => {
   const [userRole, setUserRole] = useState(null);
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  // Flag to prevent duplicate API calls during login/registration
+  const isAuthenticating = useRef(false);
 
   /**
    * Register a new user
@@ -86,6 +89,7 @@ const AuthProvider = ({ children }) => {
   const logIn = async (email, password) => {
     try {
       setLoading(true);
+      isAuthenticating.current = true; // Prevent onAuthStateChanged from making duplicate call
 
       // Step 1: Sign in with Firebase
       const userCredential = await signInWithEmailAndPassword(
@@ -124,6 +128,7 @@ const AuthProvider = ({ children }) => {
       return { success: false, error: err };
     } finally {
       setLoading(false);
+      isAuthenticating.current = false;
     }
   };
 
@@ -190,6 +195,8 @@ const AuthProvider = ({ children }) => {
   const signInWithGoogle = async () => {
     try {
       setLoading(true);
+      isAuthenticating.current = true; // Prevent onAuthStateChanged from making duplicate call
+      
       const provider = new GoogleAuthProvider();
       const userCredential = await signInWithPopup(auth, provider);
       const firebaseUser = userCredential.user;
@@ -231,6 +238,7 @@ const AuthProvider = ({ children }) => {
       return { success: false, error: err };
     } finally {
       setLoading(false);
+      isAuthenticating.current = false;
     }
   };
 
@@ -241,31 +249,40 @@ const AuthProvider = ({ children }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       try {
+        // Skip if we're already handling authentication in logIn or signInWithGoogle
+        if (isAuthenticating.current) {
+          return;
+        }
+        
         if (currentUser) {
           setUser(currentUser);
-          setLoading(true);
+          
+          // Only fetch from backend if we don't already have userData
+          if (!userData) {
+            setLoading(true);
 
-          // Fetch user data from backend
-          const response = await axios.post(API_ENDPOINTS.LOGIN, {
-            firebase_uid: currentUser.uid,
-          });
+            // Fetch user data from backend
+            const response = await axios.post(API_ENDPOINTS.LOGIN, {
+              firebase_uid: currentUser.uid,
+            });
 
-          console.log("//////////////////////////////////");
-          console.log(response);
-          console.log("//////////////////////////////////");
+            console.log("//////////////////////////////////");
+            console.log(response);
+            console.log("//////////////////////////////////");
 
-          if (response.data.success) {
-            setUserData(response.data);
-            if (response.data.roles && response.data.roles.length > 0) {
-              setUserRole(response.data.roles[0].role_name);
+            if (response.data.success) {
+              setUserData(response.data);
+              if (response.data.roles && response.data.roles.length > 0) {
+                setUserRole(response.data.roles[0].role_name);
+              }
             }
-          }
-          else{
-            // If backend does not recognize the user, log them out from Firebase
-            await signOut(auth);
-            setUser(null);
-            setUserRole(null);
-            setUserData(null);
+            else{
+              // If backend does not recognize the user, log them out from Firebase
+              await signOut(auth);
+              setUser(null);
+              setUserRole(null);
+              setUserData(null);
+            }
           }
         } else {
           setUser(null);
@@ -289,7 +306,7 @@ const AuthProvider = ({ children }) => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [userData]);
 
   const authInfo = {
     user,

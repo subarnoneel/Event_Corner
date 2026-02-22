@@ -28,7 +28,10 @@ export const useEventForm = () => {
     venueState: '',
     venueCountry: '',
     visibility: 'public',
-    requirements: ''
+    requirements: '',
+    // Registration settings
+    registrationType: 'none', // 'internal', 'external', 'none'
+    externalRegistrationUrl: ''
   });
 
   const [events, setEvents] = useState([]);

@@ -13,6 +13,7 @@ import LocationSection from './components/LocationSection';
 import ContactSection from './components/ContactSection';
 import VisibilitySection from './components/VisibilitySection';
 import AdditionalInfoSection from './components/AdditionalInfoSection';
+import RegistrationSettingsSection from './components/RegistrationSettingsSection';
 import BannerAnalyzer from './components/BannerAnalyzer';
 import ConversationalEventCreator from './components/ConversationalEventCreator';
 import { eventAddStyles } from './styles';
@@ -96,6 +97,12 @@ const EventAdd = () => {
       return;
     }
 
+    // Validate external registration URL if external is selected
+    if (formData.registrationType === 'external' && !formData.externalRegistrationUrl) {
+      toast.error('Please provide an external registration URL');
+      return;
+    }
+
     setIsSubmitting(true);
 
     // Convert additional info fields to JSONB object
@@ -122,14 +129,8 @@ const EventAdd = () => {
     console.log('Selected Event Timezone:', formData.eventTimezone);
     console.log('User Data:', userData);
     console.log('User ID (UUID):', userData?.id);
+    console.log('Registration Type:', formData.registrationType);
     console.log('===========================');
-
-    // Validate user ID is available
-    // if (!userData?.user_id) {
-    //   toast.error('User authentication error. Please refresh and try again.');
-    //   setIsSubmitting(false);
-    //   return;
-    // }
 
     try {
       // Map frontend field names to backend parameter names
@@ -158,8 +159,11 @@ const EventAdd = () => {
         requirements: formData.requirements,
         additional_info: additionalInfo,
         timeslots: timeslotsForBackend,
-        created_by: userData.user_id, // Backend expects user_id field
-        institution_id: userData.institution_id || null // If user is organizer under institution
+        created_by: userData.user_id,
+        institution_id: userData.institution_id || null,
+        // Registration settings
+        registration_type: formData.registrationType,
+        external_registration_url: formData.externalRegistrationUrl || null
       };
 
       console.log('Event Data being sent:', eventData);
@@ -178,8 +182,21 @@ const EventAdd = () => {
         throw new Error(result.error || 'Failed to create event');
       }
 
-      toast.success('Event created successfully!');
-      navigate('/');
+      // Get the created event ID from the response
+      const createdEventId = result.event_id || result.event?.id || result.eventId;
+      
+      console.log('Event created successfully:', result);
+      console.log('Created Event ID:', createdEventId);
+      console.log('Registration Type:', formData.registrationType);
+
+      // If internal registration is selected, redirect to Registration Form Builder
+      if (formData.registrationType === 'internal' && createdEventId) {
+        toast.success('Event created! Now set up your registration form.');
+        navigate(`/organizer/registration-form/${createdEventId}`);
+      } else {
+        toast.success('Event created successfully!');
+        navigate('/');
+      }
     } catch (error) {
       toast.error(error.message || 'Failed to create event');
       console.error('Event creation error:', error);
@@ -336,6 +353,11 @@ const EventAdd = () => {
             handleInfoFieldChange={handleInfoFieldChange}
           />
 
+          <RegistrationSettingsSection
+            formData={formData}
+            handleInputChange={handleInputChange}
+          />
+
           <div className="flex gap-4 justify-end">
             <button
               type="button"
@@ -349,7 +371,7 @@ const EventAdd = () => {
               disabled={isSubmitting}
               className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg disabled:opacity-50"
             >
-              {isSubmitting ? 'Creating...' : 'Create Event'}
+              {isSubmitting ? 'Creating...' : formData.registrationType === 'internal' ? 'Create & Setup Registration' : 'Create Event'}
             </button>
           </div>
         </form>

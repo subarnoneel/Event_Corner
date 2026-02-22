@@ -297,8 +297,273 @@ export const sendCreatorNotification = async ({ creatorEmail, event, action }) =
     }
 };
 
+// ============================================================================
+// PARTICIPANT REGISTRATION EMAIL FUNCTIONS
+// ============================================================================
+
+/**
+ * Extract email addresses from form data for notifications
+ * For individual registration: gets the email from form data
+ * For team registration: gets the team leader's email (member1_email)
+ * @param {Object} formData - The form data submitted during registration
+ * @param {string} templateType - 'individual' or 'team'
+ * @returns {string|null} The extracted email address or null
+ */
+export const extractFormDataEmail = (formData, templateType) => {
+    if (!formData) return null;
+    
+    if (templateType === 'team') {
+        // For team registration, look for team leader email (member1_email)
+        for (const [key, value] of Object.entries(formData)) {
+            const keyLower = key.toLowerCase();
+            if (keyLower.includes('member1') && keyLower.includes('email') && value) {
+                return value;
+            }
+        }
+    }
+    
+    // For individual registration or fallback, look for any email field
+    for (const [key, value] of Object.entries(formData)) {
+        const keyLower = key.toLowerCase();
+        // Skip member2, member3, etc. emails - only get primary email
+        if (keyLower.includes('email') && !keyLower.includes('member2') && !keyLower.includes('member3') && value) {
+            return value;
+        }
+    }
+    
+    return null;
+};
+
+/**
+ * Extract name from form data for email personalization
+ * @param {Object} formData - The form data submitted during registration
+ * @param {string} templateType - 'individual' or 'team'
+ * @returns {string|null} The extracted name or null
+ */
+export const extractFormDataName = (formData, templateType) => {
+    if (!formData) return null;
+    
+    if (templateType === 'team') {
+        // For team registration, look for team leader name (member1_name)
+        for (const [key, value] of Object.entries(formData)) {
+            const keyLower = key.toLowerCase();
+            if (keyLower.includes('member1') && keyLower.includes('name') && !keyLower.includes('team') && value) {
+                return value;
+            }
+        }
+    }
+    
+    // For individual registration or fallback, look for name field
+    for (const [key, value] of Object.entries(formData)) {
+        const keyLower = key.toLowerCase();
+        if ((keyLower.includes('name') || keyLower === 'name') && 
+            !keyLower.includes('team') && 
+            !keyLower.includes('member2') && 
+            !keyLower.includes('member3') && 
+            value) {
+            return value;
+        }
+    }
+    
+    return null;
+};
+
+/**
+ * Send approval email to participant (supports multiple recipients)
+ * @param {Object} params - Email parameters
+ * @param {string|string[]} params.emails - Participant's email(s) - can be single email or array
+ * @param {string} params.name - Participant's name
+ * @param {string} params.eventTitle - Event title
+ * @param {string} params.eventId - Event ID for link
+ */
+export const sendParticipantApprovalEmail = async ({ email, emails, name, eventTitle, eventId }) => {
+    try {
+        // Support both single email (legacy) and multiple emails
+        const recipientEmails = emails || (email ? [email] : []);
+        
+        // Remove duplicates and filter out empty values
+        const uniqueEmails = [...new Set(recipientEmails.filter(e => e && e.trim()))];
+        
+        if (uniqueEmails.length === 0) {
+            console.warn('No valid emails provided for approval notification');
+            return false;
+        }
+        
+        const eventUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/events/${eventId}`;
+        
+        const html = `
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; background-color: #f5f5f5;">
+            <div style="background-color: #ffffff; border-radius: 8px; padding: 30px;">
+                <div style="text-align: center; padding-bottom: 20px; border-bottom: 2px solid #e5e7eb;">
+                    <div style="font-size: 24px; font-weight: bold; color: #10b981;">🎉 Event Corner</div>
+                    <h2 style="color: #1f2937;">Registration Approved!</h2>
+                </div>
+                <div style="padding: 30px 0;">
+                    <p>Hi ${name || 'there'},</p>
+                    <p>Great news! Your registration for <strong>${eventTitle}</strong> has been <strong style="color: #10b981;">approved</strong>!</p>
+                    <div style="background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0;">
+                        <h3 style="margin: 0;">📅 ${eventTitle}</h3>
+                    </div>
+                    <p>You are now officially registered. We look forward to seeing you there!</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="${eventUrl}" style="padding: 14px 28px; background-color: #10b981; color: #ffffff; border-radius: 6px; text-decoration: none; font-weight: 600;">View Event Details</a>
+                    </div>
+                </div>
+                <div style="text-align: center; padding-top: 20px; border-top: 2px solid #e5e7eb; color: #6b7280; font-size: 14px;">
+                    <p>This email was sent by Event Corner</p>
+                </div>
+            </div>
+        </body>
+        </html>`;
+
+        // Send to all unique emails
+        const emailPromises = uniqueEmails.map(recipientEmail => 
+            transporter.sendMail({
+                from: `"Event Corner" <${process.env.GMAIL_USER}>`,
+                to: recipientEmail,
+                subject: `✅ Registration Approved - ${eventTitle}`,
+                html,
+                text: `Hi ${name || 'there'},\n\nYour registration for "${eventTitle}" has been approved!\n\nView event: ${eventUrl}\n\nBest regards,\nEvent Corner Team`
+            })
+        );
+
+        await Promise.all(emailPromises);
+        console.log(`✅ Participant approval email sent to ${uniqueEmails.length} recipient(s): ${uniqueEmails.join(', ')}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Failed to send participant approval email:', error);
+        throw error;
+    }
+};
+
+/**
+ * Send rejection email to participant (supports multiple recipients)
+ * @param {Object} params - Email parameters
+ * @param {string|string[]} params.emails - Participant's email(s) - can be single email or array
+ * @param {string} params.name - Participant's name
+ * @param {string} params.eventTitle - Event title
+ * @param {string} params.reason - Rejection reason (optional)
+ */
+export const sendParticipantRejectionEmail = async ({ email, emails, name, eventTitle, reason }) => {
+    try {
+        // Support both single email (legacy) and multiple emails
+        const recipientEmails = emails || (email ? [email] : []);
+        
+        // Remove duplicates and filter out empty values
+        const uniqueEmails = [...new Set(recipientEmails.filter(e => e && e.trim()))];
+        
+        if (uniqueEmails.length === 0) {
+            console.warn('No valid emails provided for rejection notification');
+            return false;
+        }
+        
+        const exploreUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/explore`;
+        
+        const html = `
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; background-color: #f5f5f5;">
+            <div style="background-color: #ffffff; border-radius: 8px; padding: 30px;">
+                <div style="text-align: center; padding-bottom: 20px; border-bottom: 2px solid #e5e7eb;">
+                    <div style="font-size: 24px; font-weight: bold; color: #3b82f6;">🎉 Event Corner</div>
+                    <h2 style="color: #1f2937;">Registration Update</h2>
+                </div>
+                <div style="padding: 30px 0;">
+                    <p>Hi ${name || 'there'},</p>
+                    <p>We regret to inform you that your registration for <strong>${eventTitle}</strong> could not be approved.</p>
+                    <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0;">
+                        <h3 style="margin: 0 0 10px 0;">📅 ${eventTitle}</h3>
+                        ${reason ? `<p style="color: #991b1b;"><strong>Reason:</strong> ${reason}</p>` : ''}
+                    </div>
+                    <p>Don't be discouraged! There are many other exciting events on Event Corner.</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="${exploreUrl}" style="padding: 14px 28px; background-color: #3b82f6; color: #ffffff; border-radius: 6px; text-decoration: none; font-weight: 600;">Explore More Events</a>
+                    </div>
+                </div>
+                <div style="text-align: center; padding-top: 20px; border-top: 2px solid #e5e7eb; color: #6b7280; font-size: 14px;">
+                    <p>This email was sent by Event Corner</p>
+                </div>
+            </div>
+        </body>
+        </html>`;
+
+        // Send to all unique emails
+        const emailPromises = uniqueEmails.map(recipientEmail => 
+            transporter.sendMail({
+                from: `"Event Corner" <${process.env.GMAIL_USER}>`,
+                to: recipientEmail,
+                subject: `Registration Update - ${eventTitle}`,
+                html,
+                text: `Hi ${name || 'there'},\n\nYour registration for "${eventTitle}" could not be approved.${reason ? `\n\nReason: ${reason}` : ''}\n\nExplore more events: ${exploreUrl}\n\nBest regards,\nEvent Corner Team`
+            })
+        );
+
+        await Promise.all(emailPromises);
+        console.log(`✅ Participant rejection email sent to ${uniqueEmails.length} recipient(s): ${uniqueEmails.join(', ')}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Failed to send participant rejection email:', error);
+        throw error;
+    }
+};
+
+/**
+ * Send bulk email to all participants of an event
+ * @param {Object} params - Email parameters
+ * @param {Array} params.participants - List of participants
+ * @param {string} params.subject - Email subject
+ * @param {string} params.message - Email message
+ * @param {string} params.eventTitle - Event title
+ */
+export const sendBulkEmailToParticipants = async ({ participants, subject, message, eventTitle }) => {
+    try {
+        const html = `
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; background-color: #f5f5f5;">
+            <div style="background-color: #ffffff; border-radius: 8px; padding: 30px;">
+                <div style="text-align: center; padding-bottom: 20px; border-bottom: 2px solid #e5e7eb;">
+                    <div style="font-size: 24px; font-weight: bold; color: #3b82f6;">🎉 Event Corner</div>
+                    <h2 style="color: #1f2937;">${eventTitle}</h2>
+                </div>
+                <div style="padding: 30px 0;">
+                    <div style="background-color: #f9fafb; border-radius: 8px; padding: 20px; white-space: pre-wrap;">${message.replace(/\n/g, '<br>')}</div>
+                </div>
+                <div style="text-align: center; padding-top: 20px; border-top: 2px solid #e5e7eb; color: #6b7280; font-size: 14px;">
+                    <p>Sent by the organizer of "${eventTitle}" via Event Corner</p>
+                </div>
+            </div>
+        </body>
+        </html>`;
+
+        const emailPromises = participants.map(participant => 
+            transporter.sendMail({
+                from: `"Event Corner" <${process.env.GMAIL_USER}>`,
+                to: participant.email,
+                subject: `[${eventTitle}] ${subject}`,
+                html,
+                text: `${eventTitle}\n\n${message}\n\n---\nSent via Event Corner`
+            })
+        );
+
+        await Promise.all(emailPromises);
+        console.log(`✅ Bulk email sent to ${participants.length} participants`);
+        return true;
+    } catch (error) {
+        console.error('❌ Failed to send bulk email:', error);
+        throw error;
+    }
+};
+
 export default {
     verifyEmailConnection,
     sendApprovalEmail,
     sendCreatorNotification,
+    sendParticipantApprovalEmail,
+    sendParticipantRejectionEmail,
+    sendBulkEmailToParticipants,
+    extractFormDataEmail,
+    extractFormDataName,
 };
