@@ -34,8 +34,6 @@ const RegisteredEvents = () => {
         url += `?status=${statusFilter}`;
       }
       
-      console.log('Fetching registered events from:', url);
-      
       const response = await fetch(url, {
         headers: {
           'Content-Type': 'application/json',
@@ -44,12 +42,10 @@ const RegisteredEvents = () => {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('Error response:', errorData);
         throw new Error(errorData.error || 'Failed to fetch registered events');
       }
 
       const result = await response.json();
-      console.log('Registered events response:', result);
       
       if (result.success) {
         setRegisteredEvents(result.registrations || []);

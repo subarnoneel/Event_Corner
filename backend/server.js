@@ -7,6 +7,7 @@ import aiRoutes from './routes/ai.routes.js';
 import crawlerRoutes from './routes/crawler.routes.js';
 import approvalRoutes from './routes/approval.routes.js';
 import registrationRoutes from './routes/registration.routes.js';
+import bookmarkRoutes from './routes/bookmark.routes.js';
 import { verifyEmailConnection } from './services/email.service.js';
 import {
   apiLimiter,
@@ -117,6 +118,7 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/crawler', crawlerRoutes);
 app.use('/api/approval', approvalRoutes);
 app.use('/api/registration', registrationRoutes);
+app.use('/api/bookmarks', bookmarkRoutes);
 
 // ============================================================================
 // AUTHENTICATION ROUTES

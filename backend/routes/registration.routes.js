@@ -389,8 +389,6 @@ router.get('/user/:userId/events', async (req, res) => {
         const { userId } = req.params;
         const { status } = req.query; // Optional filter: 'approved', 'pending', 'rejected'
 
-        console.log(`Fetching registrations for user: ${userId}, status filter: ${status || 'all'}`);
-
         // Build query for registrations with event details
         let query = supabase
             .from('event_participants')
@@ -437,8 +435,6 @@ router.get('/user/:userId/events', async (req, res) => {
             });
         }
 
-        console.log(`Found ${registrations?.length || 0} raw registrations`);
-
         // If no registrations, return empty array early
         if (!registrations || registrations.length === 0) {
             return res.json({
@@ -455,9 +451,9 @@ router.get('/user/:userId/events', async (req, res) => {
         if (eventIds.length > 0) {
             const { data: timeslotsData, error: timeslotsError } = await supabase
                 .from('event_timeslots')
-                .select('event_id, start, end')
+                .select('event_id, start_time, end_time')
                 .in('event_id', eventIds)
-                .order('start', { ascending: true });
+                .order('start_time', { ascending: true });
 
             if (timeslotsError) {
                 console.error('Error fetching timeslots:', timeslotsError);
@@ -483,7 +479,7 @@ router.get('/user/:userId/events', async (req, res) => {
             .map(reg => {
                 const event = reg.events;
                 const eventTimeslots = timeslotsByEvent[reg.event_id] || [];
-                const startDate = eventTimeslots.length > 0 ? eventTimeslots[0].start : event.created_at;
+                const startDate = eventTimeslots.length > 0 ? eventTimeslots[0].start_time : event.created_at;
 
                 return {
                     id: reg.id,
@@ -509,8 +505,6 @@ router.get('/user/:userId/events', async (req, res) => {
                     form_data: reg.form_data
                 };
             });
-
-        console.log(`Found ${enrichedRegistrations.length} registrations for user ${userId}`);
 
         res.json({
             success: true,

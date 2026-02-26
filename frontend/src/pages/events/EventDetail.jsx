@@ -4,6 +4,7 @@ import { API_ENDPOINTS } from "../../config/api";
 import AuthContext from "../../providers/AuthContext";
 import ReactMarkdown from 'react-markdown';
 import axios from 'axios';
+import { toast } from 'react-hot-toast';
 import {
   FiCalendar,
   FiClock,
@@ -24,7 +25,8 @@ import {
   FiChevronRight,
   FiEdit3,
   FiUserPlus,
-  FiClipboard
+  FiClipboard,
+  FiBookmark
 } from "react-icons/fi";
 
 const EventDetail = () => {
@@ -39,6 +41,11 @@ const EventDetail = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [registrationConfig, setRegistrationConfig] = useState(null);
   const [registrationStatus, setRegistrationStatus] = useState(null);
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [bookmarkLoading, setBookmarkLoading] = useState(false);
+
+  // Check if user is a participant
+  const isParticipant = userData?.roles?.some(role => role.role_name === 'participant');
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -71,6 +78,18 @@ const EventDetail = () => {
             }
           } catch (err) {
             // User not registered
+          }          
+          // Check bookmark status for participants
+          const userIsParticipant = userData?.roles?.some(role => role.role_name === 'participant');
+          if (userIsParticipant) {
+            try {
+              const bookmarkRes = await axios.get(API_ENDPOINTS.BOOKMARK_STATUS(userData.user_id, id));
+              if (bookmarkRes.data.success) {
+                setIsBookmarked(bookmarkRes.data.is_bookmarked);
+              }
+            } catch (err) {
+              // Not bookmarked
+            }
           }
         }
       } catch (err) {
@@ -81,7 +100,35 @@ const EventDetail = () => {
     };
 
     fetchEvent();
-  }, [id, userData]);
+  }, [id, userData, isParticipant]);
+
+  // Toggle bookmark function
+  const toggleBookmark = async () => {
+    if (!userData?.user_id || !isParticipant) {
+      toast.error('Please login as a participant to bookmark events');
+      return;
+    }
+    
+    try {
+      setBookmarkLoading(true);
+      const response = await axios.post(API_ENDPOINTS.BOOKMARK_TOGGLE, {
+        user_id: userData.user_id,
+        event_id: id
+      });
+
+      if (response.data.success) {
+        setIsBookmarked(!isBookmarked);
+        toast.success(response.data.message);
+      } else {
+        throw new Error(response.data.error || 'Failed to toggle bookmark');
+      }
+    } catch (err) {
+      console.error('Error toggling bookmark:', err);
+      toast.error(err.response?.data?.error || err.message || 'Failed to toggle bookmark');
+    } finally {
+      setBookmarkLoading(false);
+    }
+  };
 
   // Calendar Helper Functions
   const getDaysInMonth = (date) => {
@@ -672,6 +719,26 @@ const EventDetail = () => {
                 </div>
               )}
 
+              {/* Registration and Bookmark Section - Only for participants */}
+              {isParticipant && (
+              <>
+              {/* Bookmark Button */}
+              <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-yellow-200">
+                <button
+                  onClick={toggleBookmark}
+                  disabled={bookmarkLoading}
+                  className={`w-full py-4 rounded-lg font-semibold transition-all shadow-md flex items-center justify-center gap-2 ${
+                    isBookmarked
+                      ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-2 border-gray-300'
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  title={isBookmarked ? 'Remove bookmark' : 'Bookmark this event'}
+                >
+                  <FiBookmark size={20} className={isBookmarked ? 'fill-current' : ''} />
+                  {bookmarkLoading ? 'Processing...' : (isBookmarked ? 'Bookmarked' : 'Bookmark Event')}
+                </button>
+              </div>
+
               {/* Registration Card */}
               <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-orange-200">
                 <h3 className="text-lg font-bold text-gray-900 mb-4">Register for this event</h3>
@@ -792,6 +859,8 @@ const EventDetail = () => {
                   </p>
                 )}
               </div>
+              </>
+              )}
 
               {/* Quick Info Card */}
               <div className="bg-white rounded-xl shadow-md p-6">

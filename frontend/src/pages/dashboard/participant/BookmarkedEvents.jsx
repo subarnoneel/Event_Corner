@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { FiCalendar, FiMapPin, FiBookmark, FiExternalLink, FiAlertCircle, FiTrash2 } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
@@ -11,31 +11,18 @@ const BookmarkedEvents = () => {
   const { userData } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchBookmarkedEvents();
-  }, []);
-
-  const fetchBookmarkedEvents = async () => {
+  const fetchBookmarkedEvents = useCallback(async () => {
     try {
       setLoading(true);
-      // This endpoint should be implemented on backend to fetch user's bookmarked events
-      // For now, using localStorage as a fallback
-      const bookmarks = JSON.parse(localStorage.getItem(`bookmarks_${userData?.user_id}`) || '[]');
       
-      if (bookmarks.length > 0) {
-        // Fetch event details for all bookmarked event IDs
-        const eventPromises = bookmarks.map(eventId =>
-          fetch(API_ENDPOINTS.EVENT_BY_ID(eventId))
-            .then(res => res.json())
-            .catch(() => null)
-        );
-        
-        const results = await Promise.all(eventPromises);
-        const events = results
-          .filter(result => result?.success && result?.event)
-          .map(result => result.event);
-        
-        setBookmarkedEvents(events);
+      const response = await fetch(API_ENDPOINTS.USER_BOOKMARKS(userData?.user_id));
+      
+      if (!response.ok) throw new Error('Failed to fetch bookmarked events');
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setBookmarkedEvents(result.bookmarks || []);
       } else {
         setBookmarkedEvents([]);
       }
@@ -46,16 +33,33 @@ const BookmarkedEvents = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userData?.user_id]);
+
+  useEffect(() => {
+    fetchBookmarkedEvents();
+  }, [fetchBookmarkedEvents]);
 
   const removeBookmark = async (eventId) => {
     try {
-      const bookmarks = JSON.parse(localStorage.getItem(`bookmarks_${userData?.user_id}`) || '[]');
-      const updatedBookmarks = bookmarks.filter(id => id !== eventId);
-      localStorage.setItem(`bookmarks_${userData?.user_id}`, JSON.stringify(updatedBookmarks));
+      const response = await fetch(API_ENDPOINTS.BOOKMARK_TOGGLE, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userData?.user_id,
+          event_id: eventId
+        })
+      });
       
-      setBookmarkedEvents(prev => prev.filter(event => event.id !== eventId));
-      toast.success('Bookmark removed');
+      const result = await response.json();
+      
+      if (result.success) {
+        setBookmarkedEvents(prev => prev.filter(event => event.event_id !== eventId));
+        toast.success('Bookmark removed');
+      } else {
+        throw new Error(result.error || 'Failed to remove bookmark');
+      }
     } catch (error) {
       console.error('Error removing bookmark:', error);
       toast.error('Failed to remove bookmark');
@@ -163,7 +167,7 @@ const BookmarkedEvents = () => {
                       </div>
                     </div>
                     <button
-                      onClick={() => removeBookmark(event.id)}
+                      onClick={() => removeBookmark(event.event_id)}
                       className="ml-4 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                       title="Remove bookmark"
                     >
@@ -194,7 +198,7 @@ const BookmarkedEvents = () => {
 
                   <div className="flex gap-3">
                     <button
-                      onClick={() => navigate(`/event/${event.id}`)}
+                      onClick={() => navigate(`/event/${event.event_id}`)}
                       className="px-4 py-2 bg-teal-600 text-white rounded-lg font-semibold hover:bg-teal-700 transition-colors flex items-center gap-2"
                     >
                       <FiExternalLink size={16} />

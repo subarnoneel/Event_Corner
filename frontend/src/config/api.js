@@ -83,6 +83,11 @@ export const API_ENDPOINTS = {
   // Bulk Email & Export
   EVENT_EMAIL_PARTICIPANTS: (eventId) => `${API_BASE_URL}/api/registration/events/${eventId}/email-participants`,
   EVENT_EXPORT_PARTICIPANTS: (eventId) => `${API_BASE_URL}/api/registration/events/${eventId}/export`,
+  
+  // Bookmarks
+  BOOKMARK_TOGGLE: `${API_BASE_URL}/api/bookmarks/toggle`,
+  BOOKMARK_STATUS: (userId, eventId) => `${API_BASE_URL}/api/bookmarks/status/${userId}/${eventId}`,
+  USER_BOOKMARKS: (userId) => `${API_BASE_URL}/api/bookmarks/user/${userId}`,
 };
 
 export default API_BASE_URL;
