@@ -25,6 +25,7 @@ import Participant from "../pages/dashboard/participant/Participant";
 import ParticipantProfile from "../pages/dashboard/participant/ParticipantProfile";
 import RegisteredEvents from "../pages/dashboard/participant/RegisteredEvents";
 import BookmarkedEvents from "../pages/dashboard/participant/BookmarkedEvents";
+import Calendar from "../pages/dashboard/participant/Calendar";
 import MainLayout from "../components/MainLayout";
 import ProtectedRoute from "./PrivateRoutes";
 import EventAdd from "../pages/EventAdd";
@@ -169,6 +170,10 @@ const PublicRoutes = createBrowserRouter([
                     {
                         path: "bookmarked-events",
                         element: <BookmarkedEvents />
+                    },
+                    {
+                        path: "calendar",
+                        element: <Calendar />
                     },
                 ]
             },

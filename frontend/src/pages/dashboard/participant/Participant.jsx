@@ -7,7 +7,8 @@ import {
   FiMenu,
   FiX,
   FiCheckCircle,
-  FiBookmark
+  FiBookmark,
+  FiCalendar
 } from 'react-icons/fi';
 
 const Participant = () => {
@@ -42,6 +43,13 @@ const Participant = () => {
       label: 'Bookmarked Events',
       icon: FiBookmark,
       description: 'View your saved events'
+    },
+    {
+      id: 'calendar',
+      path: `/participant/calendar`,
+      label: 'Event Calendar',
+      icon: FiCalendar,
+      description: 'View events in calendar format'
     }
   ];
 
@@ -50,6 +58,7 @@ const Participant = () => {
     if (currentPath.includes('/profile')) return menuItems[0];
     if (currentPath.includes('/registered-events')) return menuItems[1];
     if (currentPath.includes('/bookmarked-events')) return menuItems[2];
+    if (currentPath.includes('/calendar')) return menuItems[3];
     return menuItems[0]; // Default to profile
   };
 

@@ -451,7 +451,7 @@ router.get('/user/:userId/events', async (req, res) => {
         if (eventIds.length > 0) {
             const { data: timeslotsData, error: timeslotsError } = await supabase
                 .from('event_timeslots')
-                .select('event_id, start_time, end_time')
+                .select('id, event_id, title, start_time, end_time, color')
                 .in('event_id', eventIds)
                 .order('start_time', { ascending: true });
 
@@ -496,13 +496,15 @@ router.get('/user/:userId/events', async (req, res) => {
                     event_status: event.status,
                     event_start_date: startDate,
                     start_date: startDate,
+                    registration_status: reg.status,
                     status: reg.status,
                     registered_at: reg.submitted_at,
                     submitted_at: reg.submitted_at,
                     reviewed_at: reg.reviewed_at,
                     rejection_reason: reg.rejection_reason,
                     team_name: reg.team_name,
-                    form_data: reg.form_data
+                    form_data: reg.form_data,
+                    timeslots: eventTimeslots
                 };
             });
 
