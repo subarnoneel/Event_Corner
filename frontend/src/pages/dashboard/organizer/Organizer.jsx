@@ -8,7 +8,8 @@ import {
   FiX,
   FiCalendar,
   FiUsers,
-  FiClipboard
+  FiClipboard,
+  FiDollarSign
 } from 'react-icons/fi';
 
 const Organizer = () => {
@@ -43,6 +44,13 @@ const Organizer = () => {
       label: 'Participants',
       icon: FiUsers,
       description: 'Manage event registrations'
+    },
+    {
+      id: 'payments',
+      path: '/organizer/payments',
+      label: 'Payments',
+      icon: FiDollarSign,
+      description: 'View transactions & refunds'
     }
   ];
 
@@ -51,24 +59,24 @@ const Organizer = () => {
     if (currentPath.includes('/profile')) return menuItems[0];
     if (currentPath.includes('/events')) return menuItems[1];
     if (currentPath.includes('/participants')) return menuItems[2];
+    if (currentPath.includes('/payments')) return menuItems[3];
     if (currentPath.includes('/registration-form')) return { label: 'Registration Form', description: 'Build event registration form' };
-    return menuItems[0]; // Default to profile
+    return menuItems[0];
   };
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-100">
       {/* Sidebar */}
       <div
-        className={`${
-          sidebarOpen ? 'w-72' : 'w-20'
-        } bg-white border-r border-gray-200 transition-all duration-300 ease-in-out flex flex-col relative`}
+        className={`${sidebarOpen ? 'w-72' : 'w-20'
+          } bg-white border-r border-gray-200 transition-all duration-300 ease-in-out flex flex-col relative`}
         style={{
           boxShadow: '4px 0 20px rgba(0, 0, 0, 0.05)'
         }}
       >
         {/* Decorative element */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-400 to-purple-600 opacity-5 rounded-full -mr-16 -mt-16" />
-        
+
         {/* Header */}
         <div className="p-6 border-b border-gray-200 relative z-10">
           <div className="flex items-center justify-between">
@@ -91,17 +99,16 @@ const Organizer = () => {
         <nav className="flex-1 p-4 space-y-3 relative z-10">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isActive = location.pathname === item.path || 
-                           (item.id === 'profile' && location.pathname.includes('/profile'));
+            const isActive = location.pathname === item.path ||
+              (item.id === 'profile' && location.pathname.includes('/profile'));
             return (
               <Link
                 key={item.id}
                 to={item.path}
-                className={`group relative w-full flex items-center gap-4 px-4 py-4 rounded-xl transition-all duration-200 ${
-                  isActive
+                className={`group relative w-full flex items-center gap-4 px-4 py-4 rounded-xl transition-all duration-200 ${isActive
                     ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg shadow-purple-500/30 scale-105'
                     : 'text-gray-700 hover:bg-gray-100 hover:translate-x-1'
-                }`}
+                  }`}
                 title={!sidebarOpen ? item.label : ''}
               >
                 <Icon size={22} className="flex-shrink-0 relative z-10" />

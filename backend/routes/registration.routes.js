@@ -6,9 +6,9 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import { 
-    sendParticipantApprovalEmail, 
-    sendParticipantRejectionEmail, 
+import {
+    sendParticipantApprovalEmail,
+    sendParticipantRejectionEmail,
     sendBulkEmailToParticipants,
     extractFormDataEmail,
     extractFormDataName
@@ -87,7 +87,7 @@ router.post('/upload-file', registrationUpload.single('file'), async (req, res) 
 
         // Return the file path that can be used to access the file
         const fileUrl = `/api/registration/files/${req.file.filename}`;
-        
+
         res.json({
             success: true,
             message: 'File uploaded successfully',
@@ -416,15 +416,15 @@ router.get('/user/:userId/events', async (req, res) => {
                 )
             `)
             .eq('user_id', userId);
-        
+
         // Apply status filter if provided (before order)
         if (status && status !== 'all') {
             query = query.eq('status', status);
         }
-        
+
         // Apply ordering last
         query = query.order('submitted_at', { ascending: false });
-        
+
         const { data: registrations, error } = await query;
 
         if (error) {
@@ -446,7 +446,7 @@ router.get('/user/:userId/events', async (req, res) => {
 
         // Get timeslots for events to determine start dates
         const eventIds = registrations.map(r => r.event_id).filter(id => id); // Filter out null/undefined
-        
+
         let timeslots = [];
         if (eventIds.length > 0) {
             const { data: timeslotsData, error: timeslotsError } = await supabase
@@ -682,12 +682,12 @@ router.post('/participants/:participantId/approve', async (req, res) => {
 
                 // Collect all emails to notify
                 const emailsToNotify = [];
-                
+
                 // 1. Always add registering user's email
                 if (userData?.email) {
                     emailsToNotify.push(userData.email);
                 }
-                
+
                 // 2. Add email from form data (individual email or team leader email)
                 const formEmail = extractFormDataEmail(formData, templateType);
                 if (formEmail) {
@@ -781,12 +781,12 @@ router.post('/participants/:participantId/reject', async (req, res) => {
 
                 // Collect all emails to notify
                 const emailsToNotify = [];
-                
+
                 // 1. Always add registering user's email
                 if (userData?.email) {
                     emailsToNotify.push(userData.email);
                 }
-                
+
                 // 2. Add email from form data (individual email or team leader email)
                 const formEmail = extractFormDataEmail(formData, templateType);
                 if (formEmail) {
@@ -983,7 +983,7 @@ router.get('/events/:eventId/export', async (req, res) => {
 
         // Convert to CSV format
         const csvRows = [];
-        
+
         // Get all unique field keys from form_data
         const allFields = new Set();
         participants.forEach(p => {
@@ -1028,4 +1028,194 @@ router.get('/events/:eventId/export', async (req, res) => {
     }
 });
 
+// ============================================================================
+// PARTICIPANT SELF-CANCELLATION
+// ============================================================================
+
+/**
+ * POST /api/registration/participants/:participantId/cancel
+ * Participant cancels their own registration
+ * If they paid, refund is processed according to event's refund policy
+ * Body: { user_id }
+ */
+router.post('/participants/:participantId/cancel', async (req, res) => {
+    try {
+        const { participantId } = req.params;
+        const { user_id } = req.body;
+
+        if (!user_id) {
+            return res.status(400).json({
+                success: false,
+                error: 'user_id is required'
+            });
+        }
+
+        // Get participant details
+        const { data: participant, error: partError } = await supabase
+            .from('event_participants')
+            .select('*')
+            .eq('id', participantId)
+            .single();
+
+        if (partError || !participant) {
+            return res.status(404).json({
+                success: false,
+                error: 'Registration not found'
+            });
+        }
+
+        // Verify the user owns this registration
+        if (participant.user_id !== user_id) {
+            return res.status(403).json({
+                success: false,
+                error: 'You can only cancel your own registration'
+            });
+        }
+
+        // Check if already cancelled
+        if (participant.status === 'cancelled') {
+            return res.status(400).json({
+                success: false,
+                error: 'Registration is already cancelled'
+            });
+        }
+
+        // Update registration status to cancelled
+        const { error: updateError } = await supabase
+            .from('event_participants')
+            .update({
+                status: 'cancelled',
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', participantId);
+
+        if (updateError) {
+            console.error('Error cancelling registration:', updateError);
+            return res.status(400).json({
+                success: false,
+                error: 'Failed to cancel registration'
+            });
+        }
+
+        // Handle refund if participant had paid
+        let refundResult = null;
+        if (participant.payment_status === 'completed') {
+            try {
+                // Find the transaction
+                const { data: txn } = await supabase
+                    .from('transactions')
+                    .select('*')
+                    .eq('participant_id', participantId)
+                    .eq('status', 'completed')
+                    .single();
+
+                if (txn) {
+                    // Get refund policy
+                    const { data: configData } = await supabase.rpc('get_payment_config', {
+                        p_event_id: participant.event_id
+                    });
+
+                    const config = configData?.config;
+                    let refund_amount = 0;
+                    let should_refund = true;
+
+                    if (config) {
+                        switch (config.refund_policy) {
+                            case 'full_refund':
+                                refund_amount = parseFloat(txn.amount);
+                                break;
+                            case 'partial_refund':
+                                refund_amount = parseFloat(txn.amount) * (config.refund_percentage / 100);
+                                break;
+                            case 'no_refund':
+                                should_refund = false;
+                                break;
+                            case 'custom':
+                                // For custom, create a pending refund for organizer to decide
+                                refund_amount = 0;
+                                should_refund = false;
+                                // Create a refund request for organizer review
+                                await supabase.from('refunds').insert({
+                                    transaction_id: txn.id,
+                                    refund_amount: 0,
+                                    reason: 'participant_cancelled',
+                                    reason_detail: 'Participant cancelled - custom refund policy, awaiting organizer decision',
+                                    status: 'initiated',
+                                    initiated_by: user_id
+                                });
+                                refundResult = {
+                                    refund_initiated: false,
+                                    refund_policy: 'custom',
+                                    message: 'Your cancellation has been recorded. The organizer will determine the refund amount.'
+                                };
+                                break;
+                        }
+                    }
+
+                    if (should_refund && refund_amount > 0) {
+                        // Create refund record
+                        await supabase.from('refunds').insert({
+                            transaction_id: txn.id,
+                            refund_amount: refund_amount,
+                            reason: 'participant_cancelled',
+                            reason_detail: 'Participant self-cancelled registration',
+                            status: 'initiated',
+                            initiated_by: user_id
+                        });
+
+                        // Try SSLCommerz refund
+                        if (txn.bank_tran_id) {
+                            try {
+                                const { initiateRefund } = await import('../services/sslcommerz.service.js');
+                                await initiateRefund(txn.bank_tran_id, refund_amount, 'Participant cancelled registration');
+                            } catch (refundErr) {
+                                console.error('SSLCommerz refund error:', refundErr);
+                            }
+                        }
+
+                        // Update transaction and participant status
+                        const newStatus = refund_amount >= parseFloat(txn.amount) ? 'refunded' : 'partially_refunded';
+                        await supabase.from('transactions').update({ status: newStatus }).eq('id', txn.id);
+                        await supabase.from('event_participants').update({ payment_status: 'refunded' }).eq('id', participantId);
+
+                        refundResult = {
+                            refund_initiated: true,
+                            refund_amount: refund_amount,
+                            original_amount: txn.amount,
+                            refund_policy: config?.refund_policy || 'full_refund',
+                            message: `Refund of ৳${refund_amount.toFixed(2)} initiated`
+                        };
+                    } else if (!should_refund && config?.refund_policy === 'no_refund') {
+                        refundResult = {
+                            refund_initiated: false,
+                            refund_policy: 'no_refund',
+                            message: 'This event has a no-refund policy. No refund will be issued.'
+                        };
+                    }
+                }
+            } catch (refundErr) {
+                console.error('Refund processing error:', refundErr);
+                // Don't fail cancellation if refund fails
+                refundResult = {
+                    refund_initiated: false,
+                    message: 'Cancellation successful but refund processing encountered an error. Please contact the organizer.'
+                };
+            }
+        }
+
+        res.json({
+            success: true,
+            message: 'Registration cancelled successfully',
+            refund: refundResult
+        });
+    } catch (err) {
+        console.error('Unexpected error:', err);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error'
+        });
+    }
+});
+
 export default router;
+

@@ -43,6 +43,7 @@ const EventDetail = () => {
   const [registrationStatus, setRegistrationStatus] = useState(null);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [bookmarkLoading, setBookmarkLoading] = useState(false);
+  const [paymentConfig, setPaymentConfig] = useState(null);
 
   // Check if user is a participant
   const isParticipant = userData?.roles?.some(role => role.role_name === 'participant');
@@ -58,7 +59,7 @@ const EventDetail = () => {
         }
 
         setEvent(data.event);
-        
+
         // Fetch registration config
         try {
           const configRes = await axios.get(API_ENDPOINTS.REGISTRATION_CONFIG(id));
@@ -68,7 +69,17 @@ const EventDetail = () => {
         } catch (err) {
           // No registration config exists
         }
-        
+
+        // Fetch payment config
+        try {
+          const payConfigRes = await axios.get(API_ENDPOINTS.PAYMENT_CONFIG(id));
+          if (payConfigRes.data.success && payConfigRes.data.config) {
+            setPaymentConfig(payConfigRes.data.config);
+          }
+        } catch (err) {
+          // No payment config
+        }
+
         // Check user's registration status if logged in
         if (userData?.user_id) {
           try {
@@ -78,7 +89,7 @@ const EventDetail = () => {
             }
           } catch (err) {
             // User not registered
-          }          
+          }
           // Check bookmark status for participants
           const userIsParticipant = userData?.roles?.some(role => role.role_name === 'participant');
           if (userIsParticipant) {
@@ -108,7 +119,7 @@ const EventDetail = () => {
       toast.error('Please login as a participant to bookmark events');
       return;
     }
-    
+
     try {
       setBookmarkLoading(true);
       const response = await axios.post(API_ENDPOINTS.BOOKMARK_TOGGLE, {
@@ -487,8 +498,8 @@ const EventDetail = () => {
                       <button
                         onClick={() => setCalendarView('month')}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition ${calendarView === 'month'
-                            ? 'bg-gray-900 text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          ? 'bg-gray-900 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                           }`}
                       >
                         month
@@ -496,8 +507,8 @@ const EventDetail = () => {
                       <button
                         onClick={() => setCalendarView('week')}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition ${calendarView === 'week'
-                            ? 'bg-gray-900 text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          ? 'bg-gray-900 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                           }`}
                       >
                         week
@@ -505,8 +516,8 @@ const EventDetail = () => {
                       <button
                         onClick={() => setCalendarView('day')}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition ${calendarView === 'day'
-                            ? 'bg-gray-900 text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          ? 'bg-gray-900 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                           }`}
                       >
                         day
@@ -721,145 +732,171 @@ const EventDetail = () => {
 
               {/* Registration and Bookmark Section - Only for participants */}
               {isParticipant && (
-              <>
-              {/* Bookmark Button */}
-              <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-yellow-200">
-                <button
-                  onClick={toggleBookmark}
-                  disabled={bookmarkLoading}
-                  className={`w-full py-4 rounded-lg font-semibold transition-all shadow-md flex items-center justify-center gap-2 ${
-                    isBookmarked
-                      ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-2 border-gray-300'
-                  } disabled:opacity-50 disabled:cursor-not-allowed`}
-                  title={isBookmarked ? 'Remove bookmark' : 'Bookmark this event'}
-                >
-                  <FiBookmark size={20} className={isBookmarked ? 'fill-current' : ''} />
-                  {bookmarkLoading ? 'Processing...' : (isBookmarked ? 'Bookmarked' : 'Bookmark Event')}
-                </button>
-              </div>
+                <>
+                  {/* Bookmark Button */}
+                  <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-yellow-200">
+                    <button
+                      onClick={toggleBookmark}
+                      disabled={bookmarkLoading}
+                      className={`w-full py-4 rounded-lg font-semibold transition-all shadow-md flex items-center justify-center gap-2 ${isBookmarked
+                          ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
+                          : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-2 border-gray-300'
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      title={isBookmarked ? 'Remove bookmark' : 'Bookmark this event'}
+                    >
+                      <FiBookmark size={20} className={isBookmarked ? 'fill-current' : ''} />
+                      {bookmarkLoading ? 'Processing...' : (isBookmarked ? 'Bookmarked' : 'Bookmark Event')}
+                    </button>
+                  </div>
 
-              {/* Registration Card */}
-              <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-orange-200">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Register for this event</h3>
-                
-                {/* Registration Status Display */}
-                {registrationStatus?.is_registered && registrationStatus.registration_status !== 'rejected' ? (
-                  <div className="mb-4">
-                    {registrationStatus.registration_status === 'approved' ? (
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-                        <FiCheckCircle size={32} className="mx-auto text-green-600 mb-2" />
-                        <p className="text-green-800 font-semibold">You're Registered!</p>
-                        <p className="text-green-600 text-sm mt-1">Your registration has been approved</p>
+                  {/* Registration Card */}
+                  <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-orange-200">
+                    <h3 className="text-lg font-bold text-gray-900 mb-4">Register for this event</h3>
+
+                    {/* Registration Status Display */}
+                    {registrationStatus?.is_registered && registrationStatus.registration_status !== 'rejected' ? (
+                      <div className="mb-4">
+                        {registrationStatus.registration_status === 'approved' ? (
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                            <FiCheckCircle size={32} className="mx-auto text-green-600 mb-2" />
+                            <p className="text-green-800 font-semibold">You're Registered!</p>
+                            <p className="text-green-600 text-sm mt-1">Your registration has been approved</p>
+                          </div>
+                        ) : (
+                          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+                            <FiClock size={32} className="mx-auto text-yellow-600 mb-2" />
+                            <p className="text-yellow-800 font-semibold">Pending Approval</p>
+                            <p className="text-yellow-600 text-sm mt-1">Waiting for organizer review</p>
+                          </div>
+                        )}
                       </div>
                     ) : (
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
-                        <FiClock size={32} className="mx-auto text-yellow-600 mb-2" />
-                        <p className="text-yellow-800 font-semibold">Pending Approval</p>
-                        <p className="text-yellow-600 text-sm mt-1">Waiting for organizer review</p>
-                      </div>
+                      <>
+                        <div className="mb-6">
+                          {paymentConfig?.is_paid_event && paymentConfig.fee_amount > 0 ? (
+                            <>
+                              <p className="text-4xl font-bold text-green-600">৳{paymentConfig.fee_amount}</p>
+                              <p className="text-sm text-gray-600 mt-1">
+                                {paymentConfig.fee_type === 'per_team' ? 'Per team' : 'Per person'} registration fee
+                              </p>
+                              <div className="mt-3 p-3 bg-gray-50 rounded-lg space-y-2">
+                                <p className="text-xs font-semibold text-gray-700">Refund Policy</p>
+                                <p className="text-xs text-gray-600">
+                                  {paymentConfig.refund_policy === 'full_refund' ? '✅ Full refund on cancellation' :
+                                    paymentConfig.refund_policy === 'partial_refund' ? `🔄 ${paymentConfig.refund_percentage}% refund on cancellation` :
+                                      paymentConfig.refund_policy === 'no_refund' ? '⚠️ No refunds' :
+                                        '📋 Refund decided case-by-case'}
+                                </p>
+                                {paymentConfig.accepted_methods && (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {paymentConfig.accepted_methods.map(m => (
+                                      <span key={m} className="px-2 py-0.5 bg-white border border-gray-200 rounded text-[10px] text-gray-500 capitalize">{m}</span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-4xl font-bold text-orange-600">Free</p>
+                              <p className="text-sm text-gray-600 mt-1">No registration fee</p>
+                            </>
+                          )}
+                        </div>
+
+                        {/* Registration deadline info - Show both date and time */}
+                        {registrationConfig?.registration_deadline && (
+                          <div className="mb-4 p-3 bg-orange-50 rounded-lg">
+                            <p className="text-sm text-orange-700 flex items-center gap-2">
+                              <FiClock size={16} />
+                              <span>
+                                <strong>Deadline:</strong>{' '}
+                                {new Date(registrationConfig.registration_deadline).toLocaleDateString('en-US', {
+                                  weekday: 'short',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric'
+                                })}{' '}
+                                at{' '}
+                                {new Date(registrationConfig.registration_deadline).toLocaleTimeString('en-US', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  hour12: true
+                                })}
+                              </span>
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Registration Button */}
+                        {registrationConfig ? (
+                          // External Registration - Show button to open external link
+                          registrationConfig.registration_type === 'external' && registrationConfig.external_registration_url ? (
+                            <a
+                              href={registrationConfig.external_registration_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-4 px-6 rounded-lg transition shadow-md transform hover:scale-105 flex items-center justify-center gap-2"
+                            >
+                              <FiGlobe size={20} />
+                              Register on External Site
+                            </a>
+                          ) : registrationConfig.is_registration_open ? (
+                            userData ? (
+                              <Link
+                                to={`/event/${id}/register`}
+                                className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-4 px-6 rounded-lg transition shadow-md transform hover:scale-105 flex items-center justify-center gap-2"
+                              >
+                                <FiUserPlus size={20} />
+                                Register Now
+                              </Link>
+                            ) : (
+                              <Link
+                                to="/login"
+                                className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-4 px-6 rounded-lg transition shadow-md transform hover:scale-105 flex items-center justify-center gap-2"
+                              >
+                                <FiUserPlus size={20} />
+                                Login to Register
+                              </Link>
+                            )
+                          ) : (
+                            <button
+                              disabled
+                              className="w-full bg-gray-400 text-white font-bold py-4 px-6 rounded-lg cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                              <FiAlertCircle size={20} />
+                              Registration Closed
+                            </button>
+                          )
+                        ) : (
+                          <div className="text-center text-gray-500 py-4">
+                            <FiClipboard size={24} className="mx-auto mb-2 opacity-50" />
+                            <p className="text-sm">Registration not available yet</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {/* Setup Registration Button - Only for event creator */}
+                    {userData?.user_id === event.created_by && !registrationConfig && (
+                      <Link
+                        to={`/organizer/registration-form/${id}`}
+                        className="mt-4 w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition shadow-md flex items-center justify-center gap-2"
+                      >
+                        <FiClipboard size={18} />
+                        Setup Registration Form
+                      </Link>
+                    )}
+
+                    {event.visibility && (
+                      <p className="text-xs text-gray-500 text-center mt-3 capitalize">
+                        {event.visibility === 'public' ? '🌍 Open to everyone' :
+                          event.visibility === 'private' ? '🔒 Private event' :
+                            '🏛️ Institution only'}
+                      </p>
                     )}
                   </div>
-                ) : (
-                  <>
-                    <div className="mb-6">
-                      <p className="text-4xl font-bold text-orange-600">Free</p>
-                      <p className="text-sm text-gray-600 mt-1">No registration fee</p>
-                    </div>
-                    
-                    {/* Registration deadline info - Show both date and time */}
-                    {registrationConfig?.registration_deadline && (
-                      <div className="mb-4 p-3 bg-orange-50 rounded-lg">
-                        <p className="text-sm text-orange-700 flex items-center gap-2">
-                          <FiClock size={16} />
-                          <span>
-                            <strong>Deadline:</strong>{' '}
-                            {new Date(registrationConfig.registration_deadline).toLocaleDateString('en-US', {
-                              weekday: 'short',
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric'
-                            })}{' '}
-                            at{' '}
-                            {new Date(registrationConfig.registration_deadline).toLocaleTimeString('en-US', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              hour12: true
-                            })}
-                          </span>
-                        </p>
-                      </div>
-                    )}
-                    
-                    {/* Registration Button */}
-                    {registrationConfig ? (
-                      // External Registration - Show button to open external link
-                      registrationConfig.registration_type === 'external' && registrationConfig.external_registration_url ? (
-                        <a
-                          href={registrationConfig.external_registration_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-4 px-6 rounded-lg transition shadow-md transform hover:scale-105 flex items-center justify-center gap-2"
-                        >
-                          <FiGlobe size={20} />
-                          Register on External Site
-                        </a>
-                      ) : registrationConfig.is_registration_open ? (
-                        userData ? (
-                          <Link
-                            to={`/event/${id}/register`}
-                            className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-4 px-6 rounded-lg transition shadow-md transform hover:scale-105 flex items-center justify-center gap-2"
-                          >
-                            <FiUserPlus size={20} />
-                            Register Now
-                          </Link>
-                        ) : (
-                          <Link
-                            to="/login"
-                            className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-4 px-6 rounded-lg transition shadow-md transform hover:scale-105 flex items-center justify-center gap-2"
-                          >
-                            <FiUserPlus size={20} />
-                            Login to Register
-                          </Link>
-                        )
-                      ) : (
-                        <button
-                          disabled
-                          className="w-full bg-gray-400 text-white font-bold py-4 px-6 rounded-lg cursor-not-allowed flex items-center justify-center gap-2"
-                        >
-                          <FiAlertCircle size={20} />
-                          Registration Closed
-                        </button>
-                      )
-                    ) : (
-                      <div className="text-center text-gray-500 py-4">
-                        <FiClipboard size={24} className="mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">Registration not available yet</p>
-                      </div>
-                    )}
-                  </>
-                )}
-                
-                {/* Setup Registration Button - Only for event creator */}
-                {userData?.user_id === event.created_by && !registrationConfig && (
-                  <Link
-                    to={`/organizer/registration-form/${id}`}
-                    className="mt-4 w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition shadow-md flex items-center justify-center gap-2"
-                  >
-                    <FiClipboard size={18} />
-                    Setup Registration Form
-                  </Link>
-                )}
-                
-                {event.visibility && (
-                  <p className="text-xs text-gray-500 text-center mt-3 capitalize">
-                    {event.visibility === 'public' ? '🌍 Open to everyone' :
-                      event.visibility === 'private' ? '🔒 Private event' :
-                        '🏛️ Institution only'}
-                  </p>
-                )}
-              </div>
-              </>
+                </>
               )}
 
               {/* Quick Info Card */}

@@ -14,6 +14,7 @@ import ContactSection from './components/ContactSection';
 import VisibilitySection from './components/VisibilitySection';
 import AdditionalInfoSection from './components/AdditionalInfoSection';
 import RegistrationSettingsSection from './components/RegistrationSettingsSection';
+import PaymentConfigSection from './components/PaymentConfigSection';
 import BannerAnalyzer from './components/BannerAnalyzer';
 import ConversationalEventCreator from './components/ConversationalEventCreator';
 import { eventAddStyles } from './styles';
@@ -163,7 +164,9 @@ const EventAdd = () => {
         institution_id: userData.institution_id || null,
         // Registration settings
         registration_type: formData.registrationType,
-        external_registration_url: formData.externalRegistrationUrl || null
+        external_registration_url: formData.externalRegistrationUrl || null,
+        // Payment configuration
+        payment_config: formData.paymentConfig || null
       };
 
       console.log('Event Data being sent:', eventData);
@@ -184,13 +187,26 @@ const EventAdd = () => {
 
       // Get the created event ID from the response
       const createdEventId = result.event_id || result.event?.id || result.eventId;
-      
+
       console.log('Event created successfully:', result);
       console.log('Created Event ID:', createdEventId);
       console.log('Registration Type:', formData.registrationType);
 
       // If internal registration is selected, redirect to Registration Form Builder
       if (formData.registrationType === 'internal' && createdEventId) {
+        // Save payment config if it's a paid event
+        if (formData.paymentConfig?.is_paid_event && formData.paymentConfig.fee_amount > 0) {
+          try {
+            await fetch(API_ENDPOINTS.PAYMENT_CONFIG(createdEventId), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(formData.paymentConfig)
+            });
+          } catch (paymentConfigErr) {
+            console.error('Payment config save error:', paymentConfigErr);
+            // Don't block event creation if payment config fails
+          }
+        }
         toast.success('Event created! Now set up your registration form.');
         navigate(`/organizer/registration-form/${createdEventId}`);
       } else {
@@ -352,6 +368,13 @@ const EventAdd = () => {
             handleRemoveInfoField={handleRemoveInfoField}
             handleInfoFieldChange={handleInfoFieldChange}
           />
+
+          {formData.registrationType === 'internal' && (
+            <PaymentConfigSection
+              formData={formData}
+              setFormData={setFormData}
+            />
+          )}
 
           <RegistrationSettingsSection
             formData={formData}

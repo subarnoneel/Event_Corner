@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { toast, Toaster } from 'react-hot-toast';
 import {
   FiArrowLeft, FiCalendar, FiClock, FiMapPin, FiUser, FiUsers,
-  FiCheck, FiX, FiUpload, FiAlertCircle, FiCheckCircle, FiInfo
+  FiCheck, FiX, FiUpload, FiAlertCircle, FiCheckCircle, FiInfo, FiDollarSign
 } from 'react-icons/fi';
 import AuthContext from '../../providers/AuthContext';
 import { API_ENDPOINTS } from '../../config/api';
@@ -26,14 +26,27 @@ const EventRegistrationForm = () => {
   const [autoFillChecked, setAutoFillChecked] = useState(false);
   const [nameFieldId, setNameFieldId] = useState(null);
   const [emailFieldId, setEmailFieldId] = useState(null);
+  const [paymentConfig, setPaymentConfig] = useState(null);
   const fileInputRefs = useRef({});
 
   useEffect(() => {
     if (eventId && userData?.user_id) {
       fetchEventAndConfig();
       checkRegistrationStatus();
+      fetchPaymentConfig();
     }
   }, [eventId, userData]);
+
+  const fetchPaymentConfig = async () => {
+    try {
+      const response = await axios.get(API_ENDPOINTS.PAYMENT_CONFIG(eventId));
+      if (response.data.success && response.data.config) {
+        setPaymentConfig(response.data.config);
+      }
+    } catch (error) {
+      console.log('No payment config for this event');
+    }
+  };
 
   const fetchEventAndConfig = async () => {
     try {
@@ -47,22 +60,22 @@ const EventRegistrationForm = () => {
       const configResponse = await axios.get(API_ENDPOINTS.REGISTRATION_CONFIG(eventId));
       if (configResponse.data.success && configResponse.data.config) {
         setConfig(configResponse.data.config);
-        
+
         // Initialize form data with empty values
         const initialData = {};
         const fields = configResponse.data.config.form_config?.fields || [];
-        
+
         // Find name and email field IDs for auto-fill functionality
         let foundNameFieldId = null;
         let foundEmailFieldId = null;
-        
+
         fields.forEach(field => {
           if (field.type === 'checkbox') {
             initialData[field.id] = [];
           } else {
             initialData[field.id] = '';
           }
-          
+
           // Identify name and email fields (locked fields from template)
           if (field.isLocked && field.type === 'short_text' && (field.id.includes('name') || field.label.toLowerCase().includes('name'))) {
             foundNameFieldId = field.id;
@@ -71,7 +84,7 @@ const EventRegistrationForm = () => {
             foundEmailFieldId = field.id;
           }
         });
-        
+
         setNameFieldId(foundNameFieldId);
         setEmailFieldId(foundEmailFieldId);
         setFormData(initialData);
@@ -133,12 +146,12 @@ const EventRegistrationForm = () => {
     if (config?.template_type === 'team') {
       const minSize = config.team_min_size || 2;
       const maxSize = config.team_max_size || 5;
-      
+
       // Count filled team members by checking member name fields
-      const memberNameFields = fields.filter(f => 
+      const memberNameFields = fields.filter(f =>
         f.memberNumber && (f.id.toLowerCase().includes('name') || f.label.toLowerCase().includes('name'))
       );
-      
+
       let filledMemberCount = 0;
       memberNameFields.forEach(field => {
         const value = formData[field.id];
@@ -208,22 +221,22 @@ const EventRegistrationForm = () => {
         toast.error('File size must be less than 10MB');
         return;
       }
-      
+
       // Validate file type
       const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
       if (!allowedTypes.includes(file.type)) {
         toast.error('Only PDF, JPG, and PNG files are allowed');
         return;
       }
-      
+
       // Show uploading state
       setUploadedFiles(prev => ({ ...prev, [fieldId]: { name: file.name, uploading: true } }));
-      
+
       try {
         // Upload file to server
         const formDataUpload = new FormData();
         formDataUpload.append('file', file);
-        
+
         const response = await axios.post(
           `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/registration/upload-file`,
           formDataUpload,
@@ -233,29 +246,29 @@ const EventRegistrationForm = () => {
             }
           }
         );
-        
+
         if (response.data.success) {
           // Store the file info with URL
-          setUploadedFiles(prev => ({ 
-            ...prev, 
-            [fieldId]: { 
-              name: file.name, 
+          setUploadedFiles(prev => ({
+            ...prev,
+            [fieldId]: {
+              name: file.name,
               url: response.data.file.url,
               originalName: response.data.file.originalName,
-              uploading: false 
-            } 
+              uploading: false
+            }
           }));
-          
+
           // Store the file URL in formData (this will be saved to database)
-          setFormData(prev => ({ 
-            ...prev, 
+          setFormData(prev => ({
+            ...prev,
             [fieldId]: JSON.stringify({
               url: response.data.file.url,
               filename: response.data.file.filename,
               originalName: response.data.file.originalName
             })
           }));
-          
+
           toast.success('File uploaded successfully');
         } else {
           throw new Error(response.data.error || 'Upload failed');
@@ -270,7 +283,7 @@ const EventRegistrationForm = () => {
         });
         return;
       }
-      
+
       // Clear error
       if (errors[fieldId]) {
         setErrors(prev => {
@@ -339,8 +352,43 @@ const EventRegistrationForm = () => {
       });
 
       if (response.data.success) {
-        toast.success('Registration submitted successfully! Waiting for approval.');
-        setTimeout(() => navigate(`/event/${eventId}`), 2000);
+        const participantId = response.data.participant_id || response.data.id;
+
+        // If event requires payment, initiate SSLCommerz payment
+        if (paymentConfig?.is_paid_event && paymentConfig.fee_amount > 0) {
+          try {
+            // Get user info for SSLCommerz
+            const nameField = config?.form_config?.fields?.find(f => f.isLocked && (f.id.includes('name') || f.label.toLowerCase().includes('name')));
+            const emailField = config?.form_config?.fields?.find(f => f.isLocked && f.type === 'email');
+            const cusName = (nameField ? formData[nameField.id] : null) || userData.full_name || 'Participant';
+            const cusEmail = (emailField ? formData[emailField.id] : null) || userData.email || 'participant@example.com';
+
+            const paymentResponse = await axios.post(API_ENDPOINTS.PAYMENT_INITIATE(eventId), {
+              user_id: userData.user_id,
+              participant_id: participantId,
+              cus_name: cusName,
+              cus_email: cusEmail,
+              cus_phone: '01700000000'
+            });
+
+            if (paymentResponse.data.success && paymentResponse.data.redirectUrl) {
+              toast.success('Redirecting to payment gateway...');
+              // Redirect to SSLCommerz checkout page
+              window.location.href = paymentResponse.data.redirectUrl;
+              return; // Don't navigate away — browser will redirect
+            } else {
+              toast.error('Failed to initiate payment. Please try again.');
+            }
+          } catch (paymentError) {
+            console.error('Payment initiation error:', paymentError);
+            toast.error('Payment gateway error. Your registration is saved — you can retry payment later.');
+            setTimeout(() => navigate(`/event/${eventId}`), 3000);
+          }
+        } else {
+          // Free event — normal flow
+          toast.success('Registration submitted successfully! Waiting for approval.');
+          setTimeout(() => navigate(`/event/${eventId}`), 2000);
+        }
       } else {
         toast.error(response.data.error || 'Failed to submit registration');
       }
@@ -354,9 +402,8 @@ const EventRegistrationForm = () => {
 
   const renderField = (field) => {
     const error = errors[field.id];
-    const baseInputClass = `w-full px-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent outline-none transition ${
-      error ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
-    }`;
+    const baseInputClass = `w-full px-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent outline-none transition ${error ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+      }`;
 
     switch (field.type) {
       case 'short_text':
@@ -456,14 +503,13 @@ const EventRegistrationForm = () => {
       case 'file_upload':
         const fileState = uploadedFiles[field.id];
         return (
-          <div 
-            className={`border-2 border-dashed rounded-lg p-6 text-center transition cursor-pointer ${
-              fileState?.uploading 
-                ? 'border-blue-400 bg-blue-50 cursor-wait' 
-                : fileState?.url 
-                  ? 'border-green-400 bg-green-50 hover:border-green-500' 
-                  : 'border-gray-300 hover:border-blue-400'
-            }`}
+          <div
+            className={`border-2 border-dashed rounded-lg p-6 text-center transition cursor-pointer ${fileState?.uploading
+              ? 'border-blue-400 bg-blue-50 cursor-wait'
+              : fileState?.url
+                ? 'border-green-400 bg-green-50 hover:border-green-500'
+                : 'border-gray-300 hover:border-blue-400'
+              }`}
             onClick={() => !fileState?.uploading && fileInputRefs.current[field.id]?.click()}
           >
             {fileState?.uploading ? (
@@ -513,12 +559,12 @@ const EventRegistrationForm = () => {
   // Helper function to count filled team members for display
   const getFilledTeamMemberCount = () => {
     if (config?.template_type !== 'team') return 0;
-    
+
     const fields = config?.form_config?.fields || [];
-    const memberNameFields = fields.filter(f => 
+    const memberNameFields = fields.filter(f =>
       f.memberNumber && (f.id.toLowerCase().includes('name') || f.label.toLowerCase().includes('name'))
     );
-    
+
     let count = 0;
     memberNameFields.forEach(field => {
       const value = formData[field.id];
@@ -568,7 +614,7 @@ const EventRegistrationForm = () => {
             <FiAlertCircle size={48} className="mx-auto text-yellow-500 mb-4" />
             <h2 className="text-2xl font-bold text-gray-800 mb-2">Registration Not Available</h2>
             <p className="text-gray-600">
-              {config?.registration_type === 'external' 
+              {config?.registration_type === 'external'
                 ? 'This event uses an external registration process. Please check the event details for registration information.'
                 : 'Online registration is not set up for this event yet.'}
             </p>
@@ -627,7 +673,7 @@ const EventRegistrationForm = () => {
             <FiX size={48} className="mx-auto text-red-500 mb-4" />
             <h2 className="text-2xl font-bold text-gray-800 mb-2">Registration Closed</h2>
             <p className="text-gray-600">
-              {config.is_deadline_passed 
+              {config.is_deadline_passed
                 ? 'The registration deadline has passed.'
                 : 'Registration is currently closed for this event.'}
             </p>
@@ -642,7 +688,7 @@ const EventRegistrationForm = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-12 px-4">
       <Toaster position="top-right" />
-      
+
       <div className="max-w-3xl mx-auto">
         {/* Back Button */}
         <Link to={`/event/${eventId}`} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6">
@@ -736,9 +782,8 @@ const EventRegistrationForm = () => {
                     }
                   }}
                   placeholder="Enter your team name"
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent outline-none transition ${
-                    errors.team_name ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-purple-500'
-                  }`}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent outline-none transition ${errors.team_name ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-purple-500'
+                    }`}
                 />
                 {errors.team_name && (
                   <p className="mt-1 text-sm text-red-500">{errors.team_name}</p>
@@ -779,17 +824,54 @@ const EventRegistrationForm = () => {
               </div>
             ))}
 
+            {/* Payment Info Banner */}
+            {paymentConfig?.is_paid_event && paymentConfig.fee_amount > 0 && (
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-green-200 rounded-lg">
+                    <FiDollarSign size={20} className="text-green-700" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-green-800">Registration Fee Required</h3>
+                    <p className="text-sm text-green-600">Payment will be processed via SSLCommerz</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between bg-white/60 rounded-lg p-3">
+                  <span className="text-sm text-green-700">
+                    {paymentConfig.fee_type === 'per_team' ? 'Per Team Fee' : 'Per Person Fee'}
+                  </span>
+                  <span className="text-xl font-bold text-green-800">৳{paymentConfig.fee_amount}</span>
+                </div>
+                <p className="text-xs text-green-600 mt-2">
+                  Refund Policy: {
+                    paymentConfig.refund_policy === 'full_refund' ? '100% refund on cancellation' :
+                      paymentConfig.refund_policy === 'partial_refund' ? `${paymentConfig.refund_percentage}% refund on cancellation` :
+                        paymentConfig.refund_policy === 'no_refund' ? 'No refunds' :
+                          'Refund decided case-by-case'
+                  }
+                </p>
+              </div>
+            )}
+
             {/* Submit Button */}
             <div className="pt-4">
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold text-lg hover:from-blue-700 hover:to-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className={`w-full py-4 text-white rounded-xl font-semibold text-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${paymentConfig?.is_paid_event
+                    ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700'
+                    : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700'
+                  }`}
               >
                 {submitting ? (
                   <>
                     <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                    Submitting...
+                    {paymentConfig?.is_paid_event ? 'Processing...' : 'Submitting...'}
+                  </>
+                ) : paymentConfig?.is_paid_event ? (
+                  <>
+                    <FiDollarSign size={20} />
+                    Pay ৳{paymentConfig.fee_amount} & Register
                   </>
                 ) : (
                   <>
@@ -799,7 +881,9 @@ const EventRegistrationForm = () => {
                 )}
               </button>
               <p className="text-center text-sm text-gray-500 mt-3">
-                Your registration will be reviewed by the event organizer.
+                {paymentConfig?.is_paid_event
+                  ? 'You will be redirected to a secure payment page after submission.'
+                  : 'Your registration will be reviewed by the event organizer.'}
               </p>
             </div>
           </form>
