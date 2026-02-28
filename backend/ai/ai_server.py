@@ -100,14 +100,20 @@ def log_analytics(user_role: str, blocked: bool, query: str, intent: str = "gene
     except Exception as e:
         print(f"⚠️  Analytics logging failed: {e}", file=sys.stderr)
 
-def detect_intent(message: str) -> str:
-    """Detect user intent from query (event_search, event_creation, account, admin, general)"""
+def detect_intent(message: str, user_role: str = "participant") -> str:
+    """Detect user intent from query, restricted by role"""
     message_lower = message.lower()
     
     event_keywords = ["find event", "search event", "event near", "what events", "upcoming events", "show events", "browse"]
     creation_keywords = ["create event", "add event", "host event", "organize event", "new event", "setup event"]
     account_keywords = ["profile", "account", "password", "email", "registration", "logout", "login"]
     admin_keywords = ["manage", "verify", "approve", "reject", "role", "permission", "user", "institution"]
+    
+    # Check for admin intent (only for admins/super_admins)
+    if user_role in ["admin", "super_admin"]:
+        for keyword in admin_keywords:
+            if keyword in message_lower:
+                return "admin"
     
     for keyword in event_keywords:
         if keyword in message_lower:
@@ -121,23 +127,24 @@ def detect_intent(message: str) -> str:
         if keyword in message_lower:
             return "account"
     
-    for keyword in admin_keywords:
-        if keyword in message_lower:
-            return "admin"
-    
     return "general"
 
 # ============ CONVERSATION MANAGEMENT ============
-def get_conversation_context(conversation_id: str, max_messages: int = 5) -> list[dict]:
-    """Retrieve previous messages from conversation history"""
+def get_conversation_context(conversation_id: str, user_id: str, max_messages: int = 5) -> list[dict]:
+    """Retrieve previous messages and verify ownership"""
     try:
         if CONVERSATIONS_FILE.exists():
             with open(CONVERSATIONS_FILE, 'r') as f:
                 conversations = json.load(f)
             
             if conversation_id in conversations:
-                messages = conversations[conversation_id].get("messages", [])
-                # Return last N messages for context
+                conv = conversations[conversation_id]
+                # Security check: verify this conversation belongs to the user
+                if conv.get("user_id") != user_id:
+                    print(f"⚠️  Access denied for user {user_id} to conversation {conversation_id}", file=sys.stderr)
+                    return []
+                
+                messages = conv.get("messages", [])
                 return messages[-max_messages:] if messages else []
     except Exception as e:
         print(f"⚠️  Conversation retrieval failed: {e}", file=sys.stderr)
@@ -159,6 +166,18 @@ def save_conversation(conversation_id: str, user_id: str, message: str, response
                 "created_at": datetime.now().isoformat(),
                 "messages": []
             }
+        else:
+            # Prevent history mixing by verifying owner
+            if conversations[conversation_id].get("user_id") != user_id:
+                print(f"⚠️  Conversation ID collision or leakage blocked for user {user_id}", file=sys.stderr)
+                # Create a new unique ID if collision
+                conversation_id = f"{user_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+                conversations[conversation_id] = {
+                    "user_id": user_id,
+                    "user_role": user_role,
+                    "created_at": datetime.now().isoformat(),
+                    "messages": []
+                }
         
         conversations[conversation_id]["messages"].append({
             "timestamp": datetime.now().isoformat(),
@@ -251,7 +270,7 @@ async def chat(request: ChatRequest):
         conversation_id = request.conversation_id or f"{user_id}_{datetime.now().strftime('%Y%m%d')}"
         
         # Detect user intent
-        intent = detect_intent(request.message)
+        intent = detect_intent(request.message, user_role)
         
         print(f"💬 Chat request [{user_role}] Intent: {intent}: {request.message[:50]}...", file=sys.stderr)
         
@@ -365,7 +384,7 @@ async def chat(request: ChatRequest):
                 messages.append({"role": prev_msg.get("role", "user"), "content": prev_msg.get("content", "")})
         elif request.conversation_id:
             # Try to retrieve from file storage
-            history = get_conversation_context(request.conversation_id)
+            history = get_conversation_context(request.conversation_id, user_id)
             for hist_item in history:
                 if "user_message" in hist_item:
                     messages.append({"role": "user", "content": hist_item["user_message"]})

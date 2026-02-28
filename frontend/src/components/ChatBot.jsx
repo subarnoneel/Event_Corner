@@ -26,9 +26,18 @@ export default function ChatBot({ showOnPublic = false }) {
   const userRole = userData?.roles?.[0]?.role_name || 'participant';
   const userId = user?.uid || 'anonymous';
 
-  // Generate conversation ID on mount
+  // Reset chat when user changes (e.g., logout/login)
   useEffect(() => {
-    if (!conversationId && isAuthenticated) {
+    setMessages([
+      { role: 'assistant', content: "Hi! I'm Event Corner AI. How can I help you?", ts: Date.now() }
+    ]);
+    setConversationId(null);
+    setIntent('general');
+  }, [userId]);
+
+  // Generate conversation ID when authenticated
+  useEffect(() => {
+    if (!conversationId && isAuthenticated && userId !== 'anonymous') {
       setConversationId(`${userId}_${Date.now()}`);
     }
   }, [isAuthenticated, userId, conversationId]);
