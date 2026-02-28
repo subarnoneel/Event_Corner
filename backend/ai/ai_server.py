@@ -145,10 +145,10 @@ def get_conversation_context(conversation_id: str, user_id: str, max_messages: i
                     return []
                 
                 messages = conv.get("messages", [])
+                # Return last N messages for context
                 return messages[-max_messages:] if messages else []
     except Exception as e:
         print(f"⚠️  Conversation retrieval failed: {e}", file=sys.stderr)
-    
     return []
 
 def save_conversation(conversation_id: str, user_id: str, message: str, response: str, user_role: str):
