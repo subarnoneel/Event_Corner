@@ -343,6 +343,41 @@ const EventRegistrationForm = () => {
     setSubmitting(true);
 
     try {
+      // PAID EVENT — go straight to payment, registration created after payment succeeds
+      if (paymentConfig?.is_paid_event && paymentConfig.fee_amount > 0) {
+        try {
+          const nameField = config?.form_config?.fields?.find(f => f.isLocked && (f.id.includes('name') || f.label.toLowerCase().includes('name')));
+          const emailField = config?.form_config?.fields?.find(f => f.isLocked && f.type === 'email');
+          const cusName = (nameField ? formData[nameField.id] : null) || userData.full_name || 'Participant';
+          const cusEmail = (emailField ? formData[emailField.id] : null) || userData.email || 'participant@example.com';
+
+          const paymentResponse = await axios.post(API_ENDPOINTS.PAYMENT_INITIATE(eventId), {
+            user_id: userData.user_id,
+            cus_name: cusName,
+            cus_email: cusEmail,
+            cus_phone: '01700000000',
+            form_data: formData,
+            team_name: config?.template_type === 'team' ? teamName : null
+          });
+
+          if (paymentResponse.data.success && paymentResponse.data.redirectUrl) {
+            toast('Redirecting to payment gateway...', { icon: '🔄' });
+            window.location.href = paymentResponse.data.redirectUrl;
+            return;
+          } else {
+            toast.error('Failed to initiate payment. Please try again.');
+            setSubmitting(false);
+            return;
+          }
+        } catch (paymentError) {
+          console.error('Payment initiation error:', paymentError);
+          toast.error('Payment gateway error. Please try again.');
+          setSubmitting(false);
+          return;
+        }
+      }
+
+      // FREE EVENT — submit registration directly
       const response = await axios.post(API_ENDPOINTS.REGISTRATION_SUBMIT(eventId), {
         user_id: userData.user_id,
         form_data: formData,
@@ -352,43 +387,8 @@ const EventRegistrationForm = () => {
       });
 
       if (response.data.success) {
-        const participantId = response.data.participant_id || response.data.id;
-
-        // If event requires payment, initiate SSLCommerz payment
-        if (paymentConfig?.is_paid_event && paymentConfig.fee_amount > 0) {
-          try {
-            // Get user info for SSLCommerz
-            const nameField = config?.form_config?.fields?.find(f => f.isLocked && (f.id.includes('name') || f.label.toLowerCase().includes('name')));
-            const emailField = config?.form_config?.fields?.find(f => f.isLocked && f.type === 'email');
-            const cusName = (nameField ? formData[nameField.id] : null) || userData.full_name || 'Participant';
-            const cusEmail = (emailField ? formData[emailField.id] : null) || userData.email || 'participant@example.com';
-
-            const paymentResponse = await axios.post(API_ENDPOINTS.PAYMENT_INITIATE(eventId), {
-              user_id: userData.user_id,
-              participant_id: participantId,
-              cus_name: cusName,
-              cus_email: cusEmail,
-              cus_phone: '01700000000'
-            });
-
-            if (paymentResponse.data.success && paymentResponse.data.redirectUrl) {
-              toast.success('Redirecting to payment gateway...');
-              // Redirect to SSLCommerz checkout page
-              window.location.href = paymentResponse.data.redirectUrl;
-              return; // Don't navigate away — browser will redirect
-            } else {
-              toast.error('Failed to initiate payment. Please try again.');
-            }
-          } catch (paymentError) {
-            console.error('Payment initiation error:', paymentError);
-            toast.error('Payment gateway error. Your registration is saved — you can retry payment later.');
-            setTimeout(() => navigate(`/event/${eventId}`), 3000);
-          }
-        } else {
-          // Free event — normal flow
-          toast.success('Registration submitted successfully! Waiting for approval.');
-          setTimeout(() => navigate(`/event/${eventId}`), 2000);
-        }
+        toast.success('Registration submitted successfully! Waiting for approval.');
+        setTimeout(() => navigate(`/event/${eventId}`), 2000);
       } else {
         toast.error(response.data.error || 'Failed to submit registration');
       }
@@ -859,8 +859,8 @@ const EventRegistrationForm = () => {
                 type="submit"
                 disabled={submitting}
                 className={`w-full py-4 text-white rounded-xl font-semibold text-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${paymentConfig?.is_paid_event
-                    ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700'
-                    : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700'
+                  ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700'
+                  : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700'
                   }`}
               >
                 {submitting ? (

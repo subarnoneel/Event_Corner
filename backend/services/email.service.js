@@ -10,26 +10,26 @@ dotenv.config();
 
 // Configure nodemailer transporter with Gmail SMTP
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.GMAIL_USER, // Your Gmail address
-        pass: process.env.GMAIL_APP_PASSWORD, // Gmail App Password (not regular password)
-    },
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER, // Your Gmail address
+    pass: process.env.GMAIL_APP_PASSWORD, // Gmail App Password (not regular password)
+  },
 });
 
 /**
  * Verify email connection on startup
  */
 export const verifyEmailConnection = async () => {
-    try {
-        await transporter.verify();
-        console.log('✅ Email service is ready to send emails');
-        return true;
-    } catch (error) {
-        console.error('❌ Email service connection failed:', error.message);
-        console.error('Please check your GMAIL_USER and GMAIL_APP_PASSWORD in .env file');
-        return false;
-    }
+  try {
+    await transporter.verify();
+    console.log('✅ Email service is ready to send emails');
+    return true;
+  } catch (error) {
+    console.error('❌ Email service connection failed:', error.message);
+    console.error('Please check your GMAIL_USER and GMAIL_APP_PASSWORD in .env file');
+    return false;
+  }
 };
 
 /**
@@ -40,7 +40,7 @@ export const verifyEmailConnection = async () => {
  * @returns {string} HTML email content
  */
 const getApprovalEmailTemplate = (event, approvalUrl, rejectionUrl) => {
-    return `
+  return `
     <!DOCTYPE html>
     <html>
     <head>
@@ -197,16 +197,16 @@ const getApprovalEmailTemplate = (event, approvalUrl, rejectionUrl) => {
  * @returns {Promise<boolean>} Success status
  */
 export const sendApprovalEmail = async ({ event, contactEmail, approvalToken, baseUrl }) => {
-    try {
-        const approvalUrl = `${baseUrl}/api/approval/verify/${approvalToken}?action=approve`;
-        const rejectionUrl = `${baseUrl}/api/approval/verify/${approvalToken}?action=reject`;
+  try {
+    const approvalUrl = `${baseUrl}/api/approval/verify/${approvalToken}?action=approve`;
+    const rejectionUrl = `${baseUrl}/api/approval/verify/${approvalToken}?action=reject`;
 
-        const mailOptions = {
-            from: `"Event Corner" <${process.env.GMAIL_USER}>`,
-            to: contactEmail,
-            subject: `Event Approval Request - ${event.title}`,
-            html: getApprovalEmailTemplate(event, approvalUrl, rejectionUrl),
-            text: `
+    const mailOptions = {
+      from: `"Event Corner" <${process.env.GMAIL_USER}>`,
+      to: contactEmail,
+      subject: `Event Approval Request - ${event.title}`,
+      html: getApprovalEmailTemplate(event, approvalUrl, rejectionUrl),
+      text: `
 Event Approval Request
 
 Hi there,
@@ -231,17 +231,17 @@ This link expires in 7 days.
 Best regards,
 Event Corner Team
       `.trim(),
-        };
+    };
 
-        const info = await transporter.sendMail(mailOptions);
-        console.log('✅ Approval email sent:', info.messageId);
-        console.log('   To:', contactEmail);
-        console.log('   Event:', event.title);
-        return true;
-    } catch (error) {
-        console.error('❌ Failed to send approval email:', error);
-        throw new Error(`Email sending failed: ${error.message}`);
-    }
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Approval email sent:', info.messageId);
+    console.log('   To:', contactEmail);
+    console.log('   Event:', event.title);
+    return true;
+  } catch (error) {
+    console.error('❌ Failed to send approval email:', error);
+    throw new Error(`Email sending failed: ${error.message}`);
+  }
 };
 
 /**
@@ -253,13 +253,13 @@ Event Corner Team
  * @returns {Promise<boolean>} Success status
  */
 export const sendCreatorNotification = async ({ creatorEmail, event, action }) => {
-    try {
-        const isApproved = action === 'approved';
-        const subject = isApproved
-            ? `✅ Event Approved: ${event.title}`
-            : `❌ Event Rejected: ${event.title}`;
+  try {
+    const isApproved = action === 'approved';
+    const subject = isApproved
+      ? `✅ Event Approved: ${event.title}`
+      : `❌ Event Rejected: ${event.title}`;
 
-        const html = `
+    const html = `
       <!DOCTYPE html>
       <html>
       <body style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
@@ -273,28 +273,28 @@ export const sendCreatorNotification = async ({ creatorEmail, event, action }) =
           <p style="margin: 5px 0;">Category: ${event.category}</p>
         </div>
         ${isApproved
-                ? '<p><strong>Your event is now live</strong> and visible to all users on Event Corner!</p>'
-                : '<p>Your event will <strong>not be displayed publicly</strong> on Event Corner. The contact person did not authorize the use of their email.</p>'
-            }
+        ? '<p><strong>Your event is now live</strong> and visible to all users on Event Corner!</p>'
+        : '<p>Your event will <strong>not be displayed publicly</strong> on Event Corner. The contact person did not authorize the use of their email.</p>'
+      }
         <p>Best regards,<br>Event Corner Team</p>
       </body>
       </html>
     `;
 
-        await transporter.sendMail({
-            from: `"Event Corner" <${process.env.GMAIL_USER}>`,
-            to: creatorEmail,
-            subject,
-            html,
-        });
+    await transporter.sendMail({
+      from: `"Event Corner" <${process.env.GMAIL_USER}>`,
+      to: creatorEmail,
+      subject,
+      html,
+    });
 
-        console.log(`✅ Creator notification sent to ${creatorEmail} (${action})`);
-        return true;
-    } catch (error) {
-        console.error('❌ Failed to send creator notification:', error);
-        // Don't throw - creator notification is not critical
-        return false;
-    }
+    console.log(`✅ Creator notification sent to ${creatorEmail} (${action})`);
+    return true;
+  } catch (error) {
+    console.error('❌ Failed to send creator notification:', error);
+    // Don't throw - creator notification is not critical
+    return false;
+  }
 };
 
 // ============================================================================
@@ -310,28 +310,28 @@ export const sendCreatorNotification = async ({ creatorEmail, event, action }) =
  * @returns {string|null} The extracted email address or null
  */
 export const extractFormDataEmail = (formData, templateType) => {
-    if (!formData) return null;
-    
-    if (templateType === 'team') {
-        // For team registration, look for team leader email (member1_email)
-        for (const [key, value] of Object.entries(formData)) {
-            const keyLower = key.toLowerCase();
-            if (keyLower.includes('member1') && keyLower.includes('email') && value) {
-                return value;
-            }
-        }
-    }
-    
-    // For individual registration or fallback, look for any email field
+  if (!formData) return null;
+
+  if (templateType === 'team') {
+    // For team registration, look for team leader email (member1_email)
     for (const [key, value] of Object.entries(formData)) {
-        const keyLower = key.toLowerCase();
-        // Skip member2, member3, etc. emails - only get primary email
-        if (keyLower.includes('email') && !keyLower.includes('member2') && !keyLower.includes('member3') && value) {
-            return value;
-        }
+      const keyLower = key.toLowerCase();
+      if (keyLower.includes('member1') && keyLower.includes('email') && value) {
+        return value;
+      }
     }
-    
-    return null;
+  }
+
+  // For individual registration or fallback, look for any email field
+  for (const [key, value] of Object.entries(formData)) {
+    const keyLower = key.toLowerCase();
+    // Skip member2, member3, etc. emails - only get primary email
+    if (keyLower.includes('email') && !keyLower.includes('member2') && !keyLower.includes('member3') && value) {
+      return value;
+    }
+  }
+
+  return null;
 };
 
 /**
@@ -341,31 +341,31 @@ export const extractFormDataEmail = (formData, templateType) => {
  * @returns {string|null} The extracted name or null
  */
 export const extractFormDataName = (formData, templateType) => {
-    if (!formData) return null;
-    
-    if (templateType === 'team') {
-        // For team registration, look for team leader name (member1_name)
-        for (const [key, value] of Object.entries(formData)) {
-            const keyLower = key.toLowerCase();
-            if (keyLower.includes('member1') && keyLower.includes('name') && !keyLower.includes('team') && value) {
-                return value;
-            }
-        }
-    }
-    
-    // For individual registration or fallback, look for name field
+  if (!formData) return null;
+
+  if (templateType === 'team') {
+    // For team registration, look for team leader name (member1_name)
     for (const [key, value] of Object.entries(formData)) {
-        const keyLower = key.toLowerCase();
-        if ((keyLower.includes('name') || keyLower === 'name') && 
-            !keyLower.includes('team') && 
-            !keyLower.includes('member2') && 
-            !keyLower.includes('member3') && 
-            value) {
-            return value;
-        }
+      const keyLower = key.toLowerCase();
+      if (keyLower.includes('member1') && keyLower.includes('name') && !keyLower.includes('team') && value) {
+        return value;
+      }
     }
-    
-    return null;
+  }
+
+  // For individual registration or fallback, look for name field
+  for (const [key, value] of Object.entries(formData)) {
+    const keyLower = key.toLowerCase();
+    if ((keyLower.includes('name') || keyLower === 'name') &&
+      !keyLower.includes('team') &&
+      !keyLower.includes('member2') &&
+      !keyLower.includes('member3') &&
+      value) {
+      return value;
+    }
+  }
+
+  return null;
 };
 
 /**
@@ -377,21 +377,21 @@ export const extractFormDataName = (formData, templateType) => {
  * @param {string} params.eventId - Event ID for link
  */
 export const sendParticipantApprovalEmail = async ({ email, emails, name, eventTitle, eventId }) => {
-    try {
-        // Support both single email (legacy) and multiple emails
-        const recipientEmails = emails || (email ? [email] : []);
-        
-        // Remove duplicates and filter out empty values
-        const uniqueEmails = [...new Set(recipientEmails.filter(e => e && e.trim()))];
-        
-        if (uniqueEmails.length === 0) {
-            console.warn('No valid emails provided for approval notification');
-            return false;
-        }
-        
-        const eventUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/events/${eventId}`;
-        
-        const html = `
+  try {
+    // Support both single email (legacy) and multiple emails
+    const recipientEmails = emails || (email ? [email] : []);
+
+    // Remove duplicates and filter out empty values
+    const uniqueEmails = [...new Set(recipientEmails.filter(e => e && e.trim()))];
+
+    if (uniqueEmails.length === 0) {
+      console.warn('No valid emails provided for approval notification');
+      return false;
+    }
+
+    const eventUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/events/${eventId}`;
+
+    const html = `
         <!DOCTYPE html>
         <html>
         <body style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; background-color: #f5f5f5;">
@@ -418,24 +418,24 @@ export const sendParticipantApprovalEmail = async ({ email, emails, name, eventT
         </body>
         </html>`;
 
-        // Send to all unique emails
-        const emailPromises = uniqueEmails.map(recipientEmail => 
-            transporter.sendMail({
-                from: `"Event Corner" <${process.env.GMAIL_USER}>`,
-                to: recipientEmail,
-                subject: `✅ Registration Approved - ${eventTitle}`,
-                html,
-                text: `Hi ${name || 'there'},\n\nYour registration for "${eventTitle}" has been approved!\n\nView event: ${eventUrl}\n\nBest regards,\nEvent Corner Team`
-            })
-        );
+    // Send to all unique emails
+    const emailPromises = uniqueEmails.map(recipientEmail =>
+      transporter.sendMail({
+        from: `"Event Corner" <${process.env.GMAIL_USER}>`,
+        to: recipientEmail,
+        subject: `✅ Registration Approved - ${eventTitle}`,
+        html,
+        text: `Hi ${name || 'there'},\n\nYour registration for "${eventTitle}" has been approved!\n\nView event: ${eventUrl}\n\nBest regards,\nEvent Corner Team`
+      })
+    );
 
-        await Promise.all(emailPromises);
-        console.log(`✅ Participant approval email sent to ${uniqueEmails.length} recipient(s): ${uniqueEmails.join(', ')}`);
-        return true;
-    } catch (error) {
-        console.error('❌ Failed to send participant approval email:', error);
-        throw error;
-    }
+    await Promise.all(emailPromises);
+    console.log(`✅ Participant approval email sent to ${uniqueEmails.length} recipient(s): ${uniqueEmails.join(', ')}`);
+    return true;
+  } catch (error) {
+    console.error('❌ Failed to send participant approval email:', error);
+    throw error;
+  }
 };
 
 /**
@@ -447,21 +447,21 @@ export const sendParticipantApprovalEmail = async ({ email, emails, name, eventT
  * @param {string} params.reason - Rejection reason (optional)
  */
 export const sendParticipantRejectionEmail = async ({ email, emails, name, eventTitle, reason }) => {
-    try {
-        // Support both single email (legacy) and multiple emails
-        const recipientEmails = emails || (email ? [email] : []);
-        
-        // Remove duplicates and filter out empty values
-        const uniqueEmails = [...new Set(recipientEmails.filter(e => e && e.trim()))];
-        
-        if (uniqueEmails.length === 0) {
-            console.warn('No valid emails provided for rejection notification');
-            return false;
-        }
-        
-        const exploreUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/explore`;
-        
-        const html = `
+  try {
+    // Support both single email (legacy) and multiple emails
+    const recipientEmails = emails || (email ? [email] : []);
+
+    // Remove duplicates and filter out empty values
+    const uniqueEmails = [...new Set(recipientEmails.filter(e => e && e.trim()))];
+
+    if (uniqueEmails.length === 0) {
+      console.warn('No valid emails provided for rejection notification');
+      return false;
+    }
+
+    const exploreUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/explore`;
+
+    const html = `
         <!DOCTYPE html>
         <html>
         <body style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; background-color: #f5f5f5;">
@@ -489,24 +489,24 @@ export const sendParticipantRejectionEmail = async ({ email, emails, name, event
         </body>
         </html>`;
 
-        // Send to all unique emails
-        const emailPromises = uniqueEmails.map(recipientEmail => 
-            transporter.sendMail({
-                from: `"Event Corner" <${process.env.GMAIL_USER}>`,
-                to: recipientEmail,
-                subject: `Registration Update - ${eventTitle}`,
-                html,
-                text: `Hi ${name || 'there'},\n\nYour registration for "${eventTitle}" could not be approved.${reason ? `\n\nReason: ${reason}` : ''}\n\nExplore more events: ${exploreUrl}\n\nBest regards,\nEvent Corner Team`
-            })
-        );
+    // Send to all unique emails
+    const emailPromises = uniqueEmails.map(recipientEmail =>
+      transporter.sendMail({
+        from: `"Event Corner" <${process.env.GMAIL_USER}>`,
+        to: recipientEmail,
+        subject: `Registration Update - ${eventTitle}`,
+        html,
+        text: `Hi ${name || 'there'},\n\nYour registration for "${eventTitle}" could not be approved.${reason ? `\n\nReason: ${reason}` : ''}\n\nExplore more events: ${exploreUrl}\n\nBest regards,\nEvent Corner Team`
+      })
+    );
 
-        await Promise.all(emailPromises);
-        console.log(`✅ Participant rejection email sent to ${uniqueEmails.length} recipient(s): ${uniqueEmails.join(', ')}`);
-        return true;
-    } catch (error) {
-        console.error('❌ Failed to send participant rejection email:', error);
-        throw error;
-    }
+    await Promise.all(emailPromises);
+    console.log(`✅ Participant rejection email sent to ${uniqueEmails.length} recipient(s): ${uniqueEmails.join(', ')}`);
+    return true;
+  } catch (error) {
+    console.error('❌ Failed to send participant rejection email:', error);
+    throw error;
+  }
 };
 
 /**
@@ -518,8 +518,8 @@ export const sendParticipantRejectionEmail = async ({ email, emails, name, event
  * @param {string} params.eventTitle - Event title
  */
 export const sendBulkEmailToParticipants = async ({ participants, subject, message, eventTitle }) => {
-    try {
-        const html = `
+  try {
+    const html = `
         <!DOCTYPE html>
         <html>
         <body style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; background-color: #f5f5f5;">
@@ -538,32 +538,99 @@ export const sendBulkEmailToParticipants = async ({ participants, subject, messa
         </body>
         </html>`;
 
-        const emailPromises = participants.map(participant => 
-            transporter.sendMail({
-                from: `"Event Corner" <${process.env.GMAIL_USER}>`,
-                to: participant.email,
-                subject: `[${eventTitle}] ${subject}`,
-                html,
-                text: `${eventTitle}\n\n${message}\n\n---\nSent via Event Corner`
-            })
-        );
+    const emailPromises = participants.map(participant =>
+      transporter.sendMail({
+        from: `"Event Corner" <${process.env.GMAIL_USER}>`,
+        to: participant.email,
+        subject: `[${eventTitle}] ${subject}`,
+        html,
+        text: `${eventTitle}\n\n${message}\n\n---\nSent via Event Corner`
+      })
+    );
 
-        await Promise.all(emailPromises);
-        console.log(`✅ Bulk email sent to ${participants.length} participants`);
-        return true;
-    } catch (error) {
-        console.error('❌ Failed to send bulk email:', error);
-        throw error;
-    }
+    await Promise.all(emailPromises);
+    console.log(`✅ Bulk email sent to ${participants.length} participants`);
+    return true;
+  } catch (error) {
+    console.error('❌ Failed to send bulk email:', error);
+    throw error;
+  }
+};
+
+// ============================================================================
+// EVENT CANCELLATION EMAIL
+// ============================================================================
+
+/**
+ * Send event cancellation email to participants
+ * @param {Object} params
+ * @param {Array} params.participants - [{email, name, was_paid}]
+ * @param {string} params.eventTitle
+ * @param {string} params.cancellationReason
+ * @param {Object|null} params.refundInfo - {refunded_count, total_amount}
+ */
+export const sendEventCancellationEmail = async ({ participants, eventTitle, cancellationReason, refundInfo }) => {
+  try {
+    const emailPromises = participants.map(participant => {
+      const html = `
+            <!DOCTYPE html>
+            <html>
+            <body style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; background-color: #f5f5f5;">
+                <div style="background-color: #ffffff; border-radius: 8px; padding: 30px;">
+                    <div style="text-align: center; padding-bottom: 20px; border-bottom: 2px solid #e5e7eb;">
+                        <div style="font-size: 24px; font-weight: bold; color: #ef4444;">⚠️ Event Corner</div>
+                        <h2 style="color: #1f2937;">Event Cancelled</h2>
+                    </div>
+                    <div style="padding: 30px 0;">
+                        <p>Hi ${participant.name || 'there'},</p>
+                        <p>We're sorry to inform you that the following event has been <strong style="color: #ef4444;">cancelled</strong>:</p>
+                        <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0;">
+                            <h3 style="margin: 0 0 10px 0; color: #991b1b;">📅 ${eventTitle}</h3>
+                            <p style="color: #991b1b; margin: 5px 0;"><strong>Reason:</strong> ${cancellationReason}</p>
+                        </div>
+                        ${participant.was_paid ? `
+                        <div style="background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0;">
+                            <p style="color: #065f46; margin: 0;"><strong>💰 Refund:</strong> A full refund has been initiated for your payment. Please allow 5-7 business days for the refund to appear in your account.</p>
+                        </div>
+                        ` : ''}
+                        <p>We apologize for any inconvenience caused.</p>
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/events" style="padding: 14px 28px; background-color: #3b82f6; color: #ffffff; border-radius: 6px; text-decoration: none; font-weight: 600;">Browse Other Events</a>
+                        </div>
+                    </div>
+                    <div style="text-align: center; padding-top: 20px; border-top: 2px solid #e5e7eb; color: #6b7280; font-size: 14px;">
+                        <p>This email was sent by Event Corner</p>
+                    </div>
+                </div>
+            </body>
+            </html>`;
+
+      return transporter.sendMail({
+        from: `"Event Corner" <${process.env.GMAIL_USER}>`,
+        to: participant.email,
+        subject: `⚠️ Event Cancelled: ${eventTitle}`,
+        html,
+        text: `Hi ${participant.name || 'there'},\n\nThe event "${eventTitle}" has been cancelled.\n\nReason: ${cancellationReason}\n\n${participant.was_paid ? 'A full refund has been initiated. Please allow 5-7 business days.\n\n' : ''}We apologize for any inconvenience.\n\nBest regards,\nEvent Corner Team`
+      });
+    });
+
+    await Promise.all(emailPromises);
+    console.log(`✅ Cancellation email sent to ${participants.length} participants`);
+    return true;
+  } catch (error) {
+    console.error('❌ Failed to send cancellation email:', error);
+    throw error;
+  }
 };
 
 export default {
-    verifyEmailConnection,
-    sendApprovalEmail,
-    sendCreatorNotification,
-    sendParticipantApprovalEmail,
-    sendParticipantRejectionEmail,
-    sendBulkEmailToParticipants,
-    extractFormDataEmail,
-    extractFormDataName,
+  verifyEmailConnection,
+  sendApprovalEmail,
+  sendCreatorNotification,
+  sendParticipantApprovalEmail,
+  sendParticipantRejectionEmail,
+  sendBulkEmailToParticipants,
+  sendEventCancellationEmail,
+  extractFormDataEmail,
+  extractFormDataName,
 };

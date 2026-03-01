@@ -100,6 +100,10 @@ export const API_ENDPOINTS = {
 
   // Participant Self-Cancellation
   PARTICIPANT_CANCEL: (participantId) => `${API_BASE_URL}/api/registration/participants/${participantId}/cancel`,
+
+  // Event Cancellation
+  CANCEL_EVENT: (eventId) => `${API_BASE_URL}/api/events/${eventId}/cancel`,
+  CANCEL_EVENT_PREVIEW: (eventId) => `${API_BASE_URL}/api/events/${eventId}/cancel-preview`,
 };
 
 export default API_BASE_URL;

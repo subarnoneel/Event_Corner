@@ -1,14 +1,17 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import AuthContext from '../../../providers/AuthContext';
 import { API_ENDPOINTS } from '../../../config/api';
-import { FiCalendar, FiMapPin, FiClock, FiEdit, FiTrash2, FiEye, FiUsers, FiClipboard } from 'react-icons/fi';
+import { FiCalendar, FiMapPin, FiClock, FiEdit, FiTrash2, FiEye, FiUsers, FiClipboard, FiXCircle } from 'react-icons/fi';
+import CancelEventModal from '../../../components/CancelEventModal';
 
 const MyEvents = () => {
   const { user, userData } = useContext(AuthContext);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [cancelModal, setCancelModal] = useState({ open: false, eventId: null, eventTitle: '' });
 
   useEffect(() => {
     fetchMyEvents();
@@ -164,7 +167,9 @@ const MyEvents = () => {
                         ? 'bg-green-100 text-green-800'
                         : event.status === 'draft'
                           ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-gray-100 text-gray-800'
+                          : event.status === 'cancelled'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-gray-100 text-gray-800'
                         }`}>
                         {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
                       </span>
@@ -193,14 +198,14 @@ const MyEvents = () => {
 
                 {/* Action Buttons */}
                 <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
-                  <Link 
+                  <Link
                     to={`/event/${event.id || event.event_id}`}
                     className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
                   >
                     <FiEye size={16} />
                     View
                   </Link>
-                  <Link 
+                  <Link
                     to={`/organizer/registration-form/${event.id || event.event_id}`}
                     className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors text-sm font-medium"
                     title="Setup or edit registration form"
@@ -208,7 +213,7 @@ const MyEvents = () => {
                     <FiClipboard size={16} />
                     Form
                   </Link>
-                  <Link 
+                  <Link
                     to={`/organizer/participants?event_id=${event.id || event.event_id}`}
                     className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors text-sm font-medium"
                     title="Manage participants"
@@ -216,12 +221,32 @@ const MyEvents = () => {
                     <FiUsers size={16} />
                     Participants
                   </Link>
+                  {event.status !== 'cancelled' && (
+                    <button
+                      onClick={() => setCancelModal({ open: true, eventId: event.id || event.event_id, eventTitle: event.title })}
+                      className="flex items-center justify-center gap-1 px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium"
+                      title="Cancel Event"
+                    >
+                      <FiXCircle size={16} />
+                      Cancel
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      <Toaster position="top-right" />
+      <CancelEventModal
+        isOpen={cancelModal.open}
+        eventId={cancelModal.eventId}
+        eventTitle={cancelModal.eventTitle}
+        userId={userData?.user_id}
+        onClose={() => setCancelModal({ open: false, eventId: null, eventTitle: '' })}
+        onCancelled={fetchMyEvents}
+      />
     </div>
   );
 };

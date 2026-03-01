@@ -9,6 +9,7 @@ import approvalRoutes from './routes/approval.routes.js';
 import registrationRoutes from './routes/registration.routes.js';
 import bookmarkRoutes from './routes/bookmark.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
+import cancelEventRoutes from './routes/cancel-event.routes.js';
 import { verifyEmailConnection } from './services/email.service.js';
 import {
   apiLimiter,
@@ -121,6 +122,7 @@ app.use('/api/approval', approvalRoutes);
 app.use('/api/registration', registrationRoutes);
 app.use('/api/bookmarks', bookmarkRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/events', cancelEventRoutes);
 
 // ============================================================================
 // AUTHENTICATION ROUTES

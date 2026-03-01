@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useContext } from 'react';
 import AuthContext from '../../../providers/AuthContext';
 import { API_ENDPOINTS } from '../../../config/api';
-import { FiCalendar, FiMapPin, FiClock, FiEdit, FiTrash2, FiEye } from 'react-icons/fi';
+import { FiCalendar, FiMapPin, FiClock, FiEdit, FiTrash2, FiEye, FiXCircle } from 'react-icons/fi';
+import { Toaster } from 'react-hot-toast';
+import CancelEventModal from '../../../components/CancelEventModal';
 
 const MyEvents = () => {
   const { user, userData } = useContext(AuthContext);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [cancelModal, setCancelModal] = useState({ open: false, eventId: null, eventTitle: '' });
 
   useEffect(() => {
     fetchMyEvents();
@@ -163,7 +166,9 @@ const MyEvents = () => {
                         ? 'bg-green-100 text-green-800'
                         : event.status === 'draft'
                           ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-gray-100 text-gray-800'
+                          : event.status === 'cancelled'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-gray-100 text-gray-800'
                         }`}>
                         {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
                       </span>
@@ -200,12 +205,32 @@ const MyEvents = () => {
                     <FiEdit size={16} />
                     Edit
                   </button>
+                  {event.status !== 'cancelled' && (
+                    <button
+                      onClick={() => setCancelModal({ open: true, eventId: event.id || event.event_id, eventTitle: event.title })}
+                      className="flex items-center justify-center gap-1 px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium"
+                      title="Cancel Event"
+                    >
+                      <FiXCircle size={16} />
+                      Cancel
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      <Toaster position="top-right" />
+      <CancelEventModal
+        isOpen={cancelModal.open}
+        eventId={cancelModal.eventId}
+        eventTitle={cancelModal.eventTitle}
+        userId={userData?.user_id}
+        onClose={() => setCancelModal({ open: false, eventId: null, eventTitle: '' })}
+        onCancelled={fetchMyEvents}
+      />
     </div>
   );
 };

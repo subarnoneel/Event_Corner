@@ -739,8 +739,8 @@ const EventDetail = () => {
                       onClick={toggleBookmark}
                       disabled={bookmarkLoading}
                       className={`w-full py-4 rounded-lg font-semibold transition-all shadow-md flex items-center justify-center gap-2 ${isBookmarked
-                          ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
-                          : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-2 border-gray-300'
+                        ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-2 border-gray-300'
                         } disabled:opacity-50 disabled:cursor-not-allowed`}
                       title={isBookmarked ? 'Remove bookmark' : 'Bookmark this event'}
                     >
@@ -754,7 +754,7 @@ const EventDetail = () => {
                     <h3 className="text-lg font-bold text-gray-900 mb-4">Register for this event</h3>
 
                     {/* Registration Status Display */}
-                    {registrationStatus?.is_registered && registrationStatus.registration_status !== 'rejected' ? (
+                    {registrationStatus?.is_registered && registrationStatus.registration_status !== 'rejected' && registrationStatus.registration_status !== 'cancelled' ? (
                       <div className="mb-4">
                         {registrationStatus.registration_status === 'approved' ? (
                           <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
@@ -766,7 +766,7 @@ const EventDetail = () => {
                           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
                             <FiClock size={32} className="mx-auto text-yellow-600 mb-2" />
                             <p className="text-yellow-800 font-semibold">Pending Approval</p>
-                            <p className="text-yellow-600 text-sm mt-1">Waiting for organizer review</p>
+                            <p className="text-yellow-600 text-sm mt-1">Your payment was received — waiting for organizer review</p>
                           </div>
                         )}
                       </div>

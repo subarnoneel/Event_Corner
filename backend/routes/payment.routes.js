@@ -96,7 +96,7 @@ router.get('/:eventId/config', async (req, res) => {
 router.post('/:eventId/initiate', async (req, res) => {
     try {
         const { eventId } = req.params;
-        const { user_id, participant_id, cus_name, cus_email, cus_phone } = req.body;
+        const { user_id, participant_id, cus_name, cus_email, cus_phone, form_data, team_name } = req.body;
 
         if (!user_id) {
             return res.status(400).json({ success: false, error: 'user_id is required' });
@@ -143,21 +143,31 @@ router.post('/:eventId/initiate', async (req, res) => {
             .single();
 
         // Create/update transaction record as 'initiated'
+        // Store form data for creating registration after payment succeeds
+        const txnInsertData = {
+            event_id: eventId,
+            participant_id: participant_id || null,
+            user_id: user_id,
+            amount: paymentConfig.fee_amount,
+            currency: paymentConfig.currency || 'BDT',
+            tran_id: tran_id,
+            status: 'initiated',
+            initiated_at: new Date().toISOString()
+        };
+
+        // If form_data is provided, store it for deferred registration creation
+        if (form_data) {
+            txnInsertData.pending_registration_data = {
+                form_data,
+                team_name: team_name || null,
+                team_members: [],
+                uploaded_files: []
+            };
+        }
+
         const { data: txnData, error: txnError } = await supabase
             .from('transactions')
-            .upsert({
-                event_id: eventId,
-                participant_id: participant_id || null,
-                user_id: user_id,
-                amount: paymentConfig.fee_amount,
-                currency: paymentConfig.currency || 'BDT',
-                tran_id: tran_id,
-                status: 'initiated',
-                initiated_at: new Date().toISOString()
-            }, {
-                onConflict: 'participant_id,event_id',
-                ignoreDuplicates: false
-            })
+            .insert(txnInsertData)
             .select()
             .single();
 
@@ -271,8 +281,32 @@ router.post('/ipn', async (req, res) => {
                     })
                     .eq('id', txn.id);
 
-                // Update participant's payment status
-                if (txn.participant_id) {
+                // Create registration from pending data if no participant exists yet
+                if (!txn.participant_id && txn.pending_registration_data) {
+                    const regData = txn.pending_registration_data;
+                    const { data: newParticipant } = await supabase
+                        .from('event_participants')
+                        .insert({
+                            event_id: txn.event_id,
+                            user_id: txn.user_id,
+                            form_data: regData.form_data,
+                            team_name: regData.team_name,
+                            team_members: regData.team_members || [],
+                            uploaded_files: regData.uploaded_files || [],
+                            status: 'pending',
+                            payment_status: 'completed'
+                        })
+                        .select('id')
+                        .single();
+
+                    if (newParticipant) {
+                        await supabase
+                            .from('transactions')
+                            .update({ participant_id: newParticipant.id, pending_registration_data: null })
+                            .eq('id', txn.id);
+                        console.log('Registration created from pending data, participant:', newParticipant.id);
+                    }
+                } else if (txn.participant_id) {
                     await supabase
                         .from('event_participants')
                         .update({ payment_status: 'completed' })
@@ -342,7 +376,32 @@ router.post('/success', async (req, res) => {
                         })
                         .eq('id', txn.id);
 
-                    if (txn.participant_id) {
+                    // Create registration from pending data if no participant exists yet
+                    if (!txn.participant_id && txn.pending_registration_data) {
+                        const regData = txn.pending_registration_data;
+                        const { data: newParticipant } = await supabase
+                            .from('event_participants')
+                            .insert({
+                                event_id: txn.event_id,
+                                user_id: txn.user_id,
+                                form_data: regData.form_data,
+                                team_name: regData.team_name,
+                                team_members: regData.team_members || [],
+                                uploaded_files: regData.uploaded_files || [],
+                                status: 'pending',
+                                payment_status: 'completed'
+                            })
+                            .select('id')
+                            .single();
+
+                        if (newParticipant) {
+                            await supabase
+                                .from('transactions')
+                                .update({ participant_id: newParticipant.id, pending_registration_data: null })
+                                .eq('id', txn.id);
+                            console.log('Registration created via success redirect, participant:', newParticipant.id);
+                        }
+                    } else if (txn.participant_id) {
                         await supabase
                             .from('event_participants')
                             .update({ payment_status: 'completed' })
@@ -657,7 +716,16 @@ router.get('/user/:userId/transactions', async (req, res) => {
             return res.status(400).json({ success: false, error: error.message });
         }
 
-        res.json(data);
+        // Compute summary from transactions (the RPC doesn't include it for user view)
+        const txns = data?.transactions || [];
+        const summary = {
+            total_spent: txns.filter(t => t.status === 'completed').reduce((sum, t) => sum + parseFloat(t.amount || 0), 0).toFixed(2),
+            total_refunded: txns.filter(t => t.refund).reduce((sum, t) => sum + parseFloat(t.refund?.refund_amount || 0), 0).toFixed(2),
+            completed_count: txns.filter(t => t.status === 'completed').length,
+            total_transactions: txns.length
+        };
+
+        res.json({ ...data, summary });
     } catch (err) {
         console.error('Unexpected error:', err);
         res.status(500).json({ success: false, error: 'Internal server error' });
