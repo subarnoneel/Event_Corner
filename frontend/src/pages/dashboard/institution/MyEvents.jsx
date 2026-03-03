@@ -1,16 +1,28 @@
 import React, { useState, useEffect, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AuthContext from '../../../providers/AuthContext';
 import { API_ENDPOINTS } from '../../../config/api';
-import { FiCalendar, FiMapPin, FiClock, FiEdit, FiTrash2, FiEye, FiXCircle } from 'react-icons/fi';
+import { FiCalendar, FiMapPin, FiClock, FiEdit, FiXCircle, FiMoreVertical } from 'react-icons/fi';
 import { Toaster } from 'react-hot-toast';
 import CancelEventModal from '../../../components/CancelEventModal';
 
 const MyEvents = () => {
   const { user, userData } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [cancelModal, setCancelModal] = useState({ open: false, eventId: null, eventTitle: '' });
+  const [openMenuId, setOpenMenuId] = useState(null);
+
+  // Close kebab menu when clicking outside
+  useEffect(() => {
+    if (openMenuId !== null) {
+      const handleClickOutside = () => setOpenMenuId(null);
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [openMenuId]);
 
   useEffect(() => {
     fetchMyEvents();
@@ -105,7 +117,7 @@ const MyEvents = () => {
       </div>
 
       {events.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-md p-12 text-center">
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-12 text-center">
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <FiCalendar size={32} className="text-gray-400" />
           </div>
@@ -123,7 +135,8 @@ const MyEvents = () => {
           {events.map((event) => (
             <div
               key={event.event_id}
-              className="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden"
+              onClick={() => navigate(`/event/${event.id || event.event_id}`)}
+              className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden cursor-pointer"
             >
               {/* Event Image */}
               <div className="h-48 bg-gradient-to-br from-blue-400 to-blue-600">
@@ -195,25 +208,39 @@ const MyEvents = () => {
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex gap-2 pt-4 border-t border-gray-100">
-                  <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium">
-                    <FiEye size={16} />
-                    View
-                  </button>
-                  <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors text-sm font-medium">
-                    <FiEdit size={16} />
-                    Edit
-                  </button>
-                  {event.status !== 'cancelled' && (
+                {/* Action Icons */}
+                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                  <div className="flex gap-1">
                     <button
-                      onClick={() => setCancelModal({ open: true, eventId: event.id || event.event_id, eventTitle: event.title })}
-                      className="flex items-center justify-center gap-1 px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium"
-                      title="Cancel Event"
+                      onClick={(e) => { e.stopPropagation(); navigate(`/event/${event.id || event.event_id}`); }}
+                      className="group relative p-2 rounded-full hover:bg-blue-50 transition-colors"
                     >
-                      <FiXCircle size={16} />
-                      Cancel
+                      <FiEdit size={18} className="text-blue-600" />
+                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs font-medium text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                        Edit Event
+                      </span>
                     </button>
+                  </div>
+                  {event.status !== 'cancelled' && (
+                    <div className="relative">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); e.nativeEvent.stopImmediatePropagation(); setOpenMenuId(openMenuId === (event.id || event.event_id) ? null : (event.id || event.event_id)); }}
+                        className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                      >
+                        <FiMoreVertical size={18} className="text-gray-500" />
+                      </button>
+                      {openMenuId === (event.id || event.event_id) && (
+                        <div className="absolute right-0 bottom-full mb-1 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setOpenMenuId(null); setCancelModal({ open: true, eventId: event.id || event.event_id, eventTitle: event.title }); }}
+                            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            <FiXCircle size={16} />
+                            Cancel Event
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>

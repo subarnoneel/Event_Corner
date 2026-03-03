@@ -10,25 +10,40 @@ dotenv.config();
 
 // Configure nodemailer transporter with Gmail SMTP
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true, // Use SSL on port 465
   auth: {
     user: process.env.GMAIL_USER, // Your Gmail address
     pass: process.env.GMAIL_APP_PASSWORD, // Gmail App Password (not regular password)
   },
+  connectionTimeout: 15000, // 15 seconds
+  socketTimeout: 20000,
 });
 
 /**
- * Verify email connection on startup
+ * Verify email connection on startup (with retry)
+ * This is a non-critical check — emails can still be sent even if
+ * the initial verify times out (nodemailer reconnects per-send).
  */
 export const verifyEmailConnection = async () => {
-  try {
-    await transporter.verify();
-    console.log('✅ Email service is ready to send emails');
-    return true;
-  } catch (error) {
-    console.error('❌ Email service connection failed:', error.message);
-    console.error('Please check your GMAIL_USER and GMAIL_APP_PASSWORD in .env file');
-    return false;
+  const maxRetries = 2;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await transporter.verify();
+      console.log('✅ Email service is ready to send emails');
+      return true;
+    } catch (error) {
+      if (attempt < maxRetries) {
+        console.warn(`⚠️ Email verify attempt ${attempt}/${maxRetries} failed: ${error.message}. Retrying in 5s...`);
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      } else {
+        console.warn('⚠️ Email service verify failed after retries:', error.message);
+        console.warn('   Emails will still be sent on-demand (nodemailer reconnects per send).');
+        console.warn('   If emails fail to send later, check GMAIL_USER and GMAIL_APP_PASSWORD in .env');
+        return false;
+      }
+    }
   }
 };
 

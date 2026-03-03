@@ -6,7 +6,7 @@ const SearchableInstitution = ({
   value, 
   onSelect, 
   selectedInstitutionId,
-  placeholder = "Start typing institution name..."
+  placeholder = "Search by institution name or email..."
 }) => {
   const [searchTerm, setSearchTerm] = useState(value || '');
   const [suggestions, setSuggestions] = useState([]);
@@ -131,8 +131,8 @@ const SearchableInstitution = ({
               className="w-full text-left px-4 py-2 hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0"
             >
               <div className="font-medium text-gray-800">{institution.name}</div>
-              {institution.description && (
-                <div className="text-xs text-gray-500">{institution.description}</div>
+              {institution.email && (
+                <div className="text-xs text-gray-500">{institution.email}</div>
               )}
             </button>
           ))}
@@ -142,7 +142,7 @@ const SearchableInstitution = ({
       {/* No results message */}
       {showSuggestions && searchTerm.trim() && suggestions.length === 0 && !loading && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 p-3">
-          <p className="text-sm text-gray-500">No institutions found. Try a different name.</p>
+          <p className="text-sm text-gray-500">No institutions found. Try a different name or email.</p>
         </div>
       )}
 
@@ -152,7 +152,7 @@ const SearchableInstitution = ({
       )}
 
       {/* Help text */}
-      <p className="text-xs text-gray-500 mt-1">Type the institution name and select from suggestions</p>
+      <p className="text-xs text-gray-500 mt-1">Type the institution name or email and select from suggestions</p>
     </div>
   );
 };

@@ -627,12 +627,12 @@ const ParticipantManagement = () => {
               {/* Basic Info */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-500">Name</label>
-                  <p className="mt-1 text-gray-900">{selectedParticipant.user_name || selectedParticipant.form_data?.name || '-'}</p>
+                  <label className="block text-sm font-medium text-gray-500">Submitted By</label>
+                  <p className="mt-1 text-gray-900">{selectedParticipant.users?.full_name || selectedParticipant.user_name || '-'}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500">Email</label>
-                  <p className="mt-1 text-gray-900">{selectedParticipant.user_email || selectedParticipant.form_data?.email || '-'}</p>
+                  <label className="block text-sm font-medium text-gray-500">Account Email</label>
+                  <p className="mt-1 text-gray-900">{selectedParticipant.users?.email || selectedParticipant.user_email || '-'}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500">Event</label>
@@ -827,12 +827,38 @@ const ParticipantManagement = () => {
             </div>
             <div className="p-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Rejection Reason (optional)
+                Common Rejection Reasons
+              </label>
+              <select
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val && val !== '__other__') {
+                    setRejectionReason(val);
+                  } else {
+                    setRejectionReason('');
+                  }
+                }}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none mb-4 text-gray-700"
+                defaultValue=""
+              >
+                <option value="" disabled>— Select a template (optional) —</option>
+                <option value="Incomplete or missing required information">Incomplete or missing required information</option>
+                <option value="Registration form filled out incorrectly">Registration form filled out incorrectly</option>
+                <option value="Does not meet eligibility criteria for this event">Does not meet eligibility criteria for this event</option>
+                <option value="Duplicate registration detected">Duplicate registration detected</option>
+                <option value="Event capacity has been reached">Event capacity has been reached</option>
+                <option value="Registration submitted after deadline">Registration submitted after deadline</option>
+                <option value="Invalid or unverifiable identity/credentials">Invalid or unverifiable identity/credentials</option>
+                <option value="__other__">Other (write below)</option>
+              </select>
+
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Rejection Message (optional)
               </label>
               <textarea
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder="Provide a reason for rejection..."
+                placeholder="Provide a reason for rejection or customize the selected template..."
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                 rows="4"
               />

@@ -274,7 +274,7 @@ app.post('/api/auth/login', async (req, res) => {
  * GET /api/institutions/search?q=search_term
  * Search for institutions (users with role 'institution')
  * Query params:
- *   q: search term (institution name)
+ *   q: search term (institution name or email)
  */
 app.get('/api/institutions/search', async (req, res) => {
   try {
@@ -287,27 +287,16 @@ app.get('/api/institutions/search', async (req, res) => {
       });
     }
 
-    // Search for users with role 'institution'
-    const { data: roleData, error: roleError } = await supabase
-      .from('roles')
-      .select('id')
-      .eq('role_name', 'institution')
-      .single();
+    const trimmed = searchTerm.trim();
 
-    if (roleError) {
-      console.error('Error fetching institution role:', roleError);
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to fetch institution role'
-      });
-    }
-
-    // Search users with institution role by full_name
+    // Single joined query: users → user_roles → roles, filtered by institution role
+    // Matches against both full_name and email
     const { data: institutions, error: searchError } = await supabase
       .from('users')
-      .select('id, full_name')
-      .ilike('full_name', `%${searchTerm}%`)
+      .select('id, full_name, email, user_roles!user_roles_user_id_fkey!inner(role_id, roles!inner(role_name))')
+      .eq('user_roles.roles.role_name', 'institution')
       .eq('is_active', true)
+      .or(`full_name.ilike.%${trimmed}%,email.ilike.%${trimmed}%`)
       .limit(10);
 
     if (searchError) {
@@ -318,27 +307,15 @@ app.get('/api/institutions/search', async (req, res) => {
       });
     }
 
-    // Verify each result has the institution role
-    const validInstitutions = [];
-    for (const institution of institutions) {
-      const { data: userRole, error: userRoleError } = await supabase
-        .from('user_roles')
-        .select('role_id')
-        .eq('user_id', institution.id)
-        .eq('role_id', roleData.id)
-        .single();
-
-      if (!userRoleError && userRole) {
-        validInstitutions.push({
-          id: institution.id,
-          name: institution.full_name
-        });
-      }
-    }
+    const result = (institutions || []).map(inst => ({
+      id: inst.id,
+      name: inst.full_name,
+      email: inst.email
+    }));
 
     res.json({
       success: true,
-      institutions: validInstitutions
+      institutions: result
     });
   } catch (err) {
     console.error('Unexpected search error:', err);

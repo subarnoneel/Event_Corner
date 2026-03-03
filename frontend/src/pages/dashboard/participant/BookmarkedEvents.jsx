@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react';
-import { FiCalendar, FiMapPin, FiBookmark, FiExternalLink, FiAlertCircle, FiTrash2 } from 'react-icons/fi';
+import { FiCalendar, FiMapPin, FiBookmark, FiAlertCircle, FiTrash2 } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import AuthContext from '../../../providers/AuthContext';
@@ -110,7 +110,7 @@ const BookmarkedEvents = () => {
 
       {/* Events List */}
       {bookmarkedEvents.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 text-center border border-gray-200">
+        <div className="bg-white rounded-xl p-12 text-center border border-gray-100 shadow-sm">
           <FiBookmark className="mx-auto text-gray-400 mb-4" size={48} />
           <h3 className="text-xl font-semibold text-gray-900 mb-2">No Bookmarked Events</h3>
           <p className="text-gray-600 mb-6">
@@ -128,7 +128,8 @@ const BookmarkedEvents = () => {
           {bookmarkedEvents.map((event) => (
             <div
               key={event.id}
-              className="bg-white rounded-2xl border border-gray-200 hover:shadow-lg transition-shadow overflow-hidden"
+              onClick={() => navigate(`/event/${event.event_id}`)}
+              className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 overflow-hidden cursor-pointer"
             >
               <div className="flex flex-col md:flex-row">
                 {/* Event Image */}
@@ -167,7 +168,7 @@ const BookmarkedEvents = () => {
                       </div>
                     </div>
                     <button
-                      onClick={() => removeBookmark(event.event_id)}
+                      onClick={(e) => { e.stopPropagation(); removeBookmark(event.event_id); }}
                       className="ml-4 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                       title="Remove bookmark"
                     >
@@ -194,16 +195,6 @@ const BookmarkedEvents = () => {
                         <span className="text-sm">{event.venue_name}</span>
                       </div>
                     )}
-                  </div>
-
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => navigate(`/event/${event.event_id}`)}
-                      className="px-4 py-2 bg-teal-600 text-white rounded-lg font-semibold hover:bg-teal-700 transition-colors flex items-center gap-2"
-                    >
-                      <FiExternalLink size={16} />
-                      View Event
-                    </button>
                   </div>
                 </div>
               </div>

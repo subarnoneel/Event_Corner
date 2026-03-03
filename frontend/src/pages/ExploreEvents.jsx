@@ -3,7 +3,7 @@ import { useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import AuthContext from "../providers/AuthContext";
 import { API_ENDPOINTS } from "../config/api";
-import { FiCalendar, FiMapPin, FiClock, FiEye } from 'react-icons/fi';
+import { FiCalendar, FiMapPin, FiClock } from 'react-icons/fi';
 
 const ExploreEvents = () => {
   const { user } = useContext(AuthContext);
@@ -174,7 +174,8 @@ const ExploreEvents = () => {
             {events.map((event) => (
               <div
                 key={event.id}
-                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300"
+                onClick={() => navigate(`/event/${event.id}`)}
+                className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
               >
                 {/* Event Image */}
                 <div className="h-48 bg-gradient-to-br from-red-400 to-red-600">
@@ -224,15 +225,6 @@ const ExploreEvents = () => {
                       </div>
                     )}
                   </div>
-
-                  {/* Action Button */}
-                  <button
-                    onClick={() => navigate(`/event/${event.id}`)}
-                    className="w-full flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
-                  >
-                    <FiEye size={16} />
-                    View Details
-                  </button>
                 </div>
               </div>
             ))}

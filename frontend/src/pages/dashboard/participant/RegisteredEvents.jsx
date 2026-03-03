@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { FiCalendar, FiMapPin, FiClock, FiExternalLink, FiAlertCircle, FiXCircle, FiDollarSign } from 'react-icons/fi';
+import { FiCalendar, FiMapPin, FiClock, FiAlertCircle, FiXCircle, FiDollarSign } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import AuthContext from '../../../providers/AuthContext';
@@ -267,7 +267,7 @@ const RegisteredEvents = () => {
 
         {/* Events List */}
         {filteredEvents.length === 0 ? (
-          <div className="bg-white rounded-2xl p-12 text-center border border-gray-200">
+          <div className="bg-white rounded-xl p-12 text-center border border-gray-100 shadow-sm">
             <FiAlertCircle className="mx-auto text-gray-400 mb-4" size={48} />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">No Events Found</h3>
             <p className="text-gray-600 mb-6">
@@ -287,7 +287,8 @@ const RegisteredEvents = () => {
             {filteredEvents.map((registration) => (
               <div
                 key={registration.id}
-                className="bg-white rounded-2xl border border-gray-200 hover:shadow-lg transition-shadow overflow-hidden"
+                onClick={() => navigate(`/event/${registration.event_id}`)}
+                className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 overflow-hidden cursor-pointer"
               >
                 <div className="flex flex-col md:flex-row">
                   {/* Event Image */}
@@ -364,24 +365,17 @@ const RegisteredEvents = () => {
                       </div>
                     )}
 
-                    <div className="flex gap-3">
-                      <button
-                        onClick={() => navigate(`/event/${registration.event_id}`)}
-                        className="px-4 py-2 bg-teal-600 text-white rounded-lg font-semibold hover:bg-teal-700 transition-colors flex items-center gap-2"
-                      >
-                        <FiExternalLink size={16} />
-                        View Event
-                      </button>
-                      {(registration.status === 'pending' || registration.status === 'approved') && registration.status !== 'cancelled' && (
+                    {(registration.status === 'pending' || registration.status === 'approved') && registration.status !== 'cancelled' && (
+                      <div className="flex">
                         <button
-                          onClick={() => handleCancelClick(registration)}
-                          className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg font-semibold hover:bg-red-100 transition-colors flex items-center gap-2"
+                          onClick={(e) => { e.stopPropagation(); handleCancelClick(registration); }}
+                          className="px-3 py-1.5 text-sm text-red-600 border border-red-200 rounded-lg font-medium hover:bg-red-50 transition-colors flex items-center gap-1.5"
                         >
-                          <FiXCircle size={16} />
-                          Cancel Registration
+                          <FiXCircle size={14} />
+                          Cancel
                         </button>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

@@ -18,7 +18,7 @@ import pic2 from "../assets/finals.jpg";
 import pic3 from "../assets/foreign.jpg";
 
 const Home = () => {
-  const { user } = useContext(AuthContext);
+  const { user, userData } = useContext(AuthContext);
 
   const [currentSlide, setCurrentSlide] = useState(0);
   const carouselSlides = [
@@ -128,9 +128,9 @@ const Home = () => {
                     >
                       Find Your Event
                     </Link>
-                    {user && (
+                    {user && userData?.roles?.some(role => ['super_admin', 'admin'].includes(role.role_name)) && (
                       <Link
-                        to="/superadmin"
+                        to={userData.roles.some(r => r.role_name === 'super_admin') ? '/superadmin' : '/admin'}
                         className="bg-blue-600 text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors duration-300 transform hover:scale-105 flex items-center justify-center gap-2"
                       >
                         <FiShield size={20} />
