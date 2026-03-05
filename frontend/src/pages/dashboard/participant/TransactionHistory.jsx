@@ -111,9 +111,9 @@ const TransactionHistory = () => {
                     <div className="bg-gradient-to-br from-teal-50 to-cyan-50 border border-teal-200 rounded-xl p-4">
                         <div className="flex items-center gap-2 text-teal-600 mb-1">
                             <FiDollarSign size={16} />
-                            <span className="text-xs font-medium">Total Spent</span>
+                            <span className="text-xs font-medium">Total Paid</span>
                         </div>
-                        <p className="text-2xl font-bold text-teal-800">৳{summary.total_spent || summary.total_revenue || 0}</p>
+                        <p className="text-2xl font-bold text-teal-800">৳{summary.total_spent || 0}</p>
                     </div>
 
                     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
@@ -124,20 +124,21 @@ const TransactionHistory = () => {
                         <p className="text-2xl font-bold text-blue-800">৳{summary.total_refunded || 0}</p>
                     </div>
 
-                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4">
-                        <div className="flex items-center gap-2 text-green-600 mb-1">
-                            <FiCheckCircle size={16} />
-                            <span className="text-xs font-medium">Successful</span>
+                    <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-4">
+                        <div className="flex items-center gap-2 text-purple-600 mb-1">
+                            <FiDollarSign size={16} />
+                            <span className="text-xs font-medium">Net Cost</span>
                         </div>
-                        <p className="text-2xl font-bold text-green-800">{summary.completed_count || 0}</p>
+                        <p className="text-2xl font-bold text-purple-800">৳{(parseFloat(summary.total_spent || 0) - parseFloat(summary.total_refunded || 0)).toFixed(2)}</p>
                     </div>
 
                     <div className="bg-gradient-to-br from-gray-50 to-slate-50 border border-gray-200 rounded-xl p-4">
                         <div className="flex items-center gap-2 text-gray-600 mb-1">
                             <FiCreditCard size={16} />
-                            <span className="text-xs font-medium">Total</span>
+                            <span className="text-xs font-medium">Transactions</span>
                         </div>
                         <p className="text-2xl font-bold text-gray-800">{summary.total_transactions || transactions.length}</p>
+                        <p className="text-xs text-gray-500 mt-1">{summary.completed_count || 0} paid</p>
                     </div>
                 </div>
             )}

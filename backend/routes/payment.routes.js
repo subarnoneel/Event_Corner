@@ -116,20 +116,34 @@ router.post('/:eventId/initiate', async (req, res) => {
 
         const paymentConfig = configData.config;
 
-        // Check for existing completed transaction
+        // Check for existing completed transaction with active registration
         const { data: existingTxn } = await supabase
             .from('transactions')
-            .select('id, status')
+            .select('id, status, participant_id')
             .eq('event_id', eventId)
             .eq('user_id', user_id)
             .eq('status', 'completed')
             .maybeSingle();
 
         if (existingTxn) {
-            return res.status(400).json({
-                success: false,
-                error: 'Payment already completed for this registration'
-            });
+            // Allow re-payment if the participant's registration was cancelled or rejected
+            let allowRepayment = false;
+            if (existingTxn.participant_id) {
+                const { data: participant } = await supabase
+                    .from('event_participants')
+                    .select('status')
+                    .eq('id', existingTxn.participant_id)
+                    .single();
+                if (participant && ['cancelled', 'rejected'].includes(participant.status)) {
+                    allowRepayment = true;
+                }
+            }
+            if (!allowRepayment) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Payment already completed for this registration'
+                });
+            }
         }
 
         // Generate unique transaction ID
@@ -284,27 +298,63 @@ router.post('/ipn', async (req, res) => {
                 // Create registration from pending data if no participant exists yet
                 if (!txn.participant_id && txn.pending_registration_data) {
                     const regData = txn.pending_registration_data;
-                    const { data: newParticipant } = await supabase
-                        .from('event_participants')
-                        .insert({
-                            event_id: txn.event_id,
-                            user_id: txn.user_id,
-                            form_data: regData.form_data,
-                            team_name: regData.team_name,
-                            team_members: regData.team_members || [],
-                            uploaded_files: regData.uploaded_files || [],
-                            status: 'pending',
-                            payment_status: 'completed'
-                        })
-                        .select('id')
-                        .single();
 
-                    if (newParticipant) {
+                    // Check if user already has a cancelled/rejected registration for this event
+                    const { data: existingParticipant } = await supabase
+                        .from('event_participants')
+                        .select('id, status')
+                        .eq('event_id', txn.event_id)
+                        .eq('user_id', txn.user_id)
+                        .maybeSingle();
+
+                    let participantId = null;
+
+                    if (existingParticipant && ['cancelled', 'rejected'].includes(existingParticipant.status)) {
+                        // Update existing cancelled/rejected registration
+                        const { data: updatedParticipant } = await supabase
+                            .from('event_participants')
+                            .update({
+                                form_data: regData.form_data,
+                                team_name: regData.team_name,
+                                team_members: regData.team_members || [],
+                                uploaded_files: regData.uploaded_files || [],
+                                status: 'pending',
+                                payment_status: 'completed',
+                                reviewed_by: null,
+                                reviewed_at: null,
+                                rejection_reason: null,
+                                submitted_at: new Date().toISOString(),
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq('id', existingParticipant.id)
+                            .select('id')
+                            .single();
+                        participantId = updatedParticipant?.id;
+                    } else if (!existingParticipant) {
+                        // Insert new registration
+                        const { data: newParticipant } = await supabase
+                            .from('event_participants')
+                            .insert({
+                                event_id: txn.event_id,
+                                user_id: txn.user_id,
+                                form_data: regData.form_data,
+                                team_name: regData.team_name,
+                                team_members: regData.team_members || [],
+                                uploaded_files: regData.uploaded_files || [],
+                                status: 'pending',
+                                payment_status: 'completed'
+                            })
+                            .select('id')
+                            .single();
+                        participantId = newParticipant?.id;
+                    }
+
+                    if (participantId) {
                         await supabase
                             .from('transactions')
-                            .update({ participant_id: newParticipant.id, pending_registration_data: null })
+                            .update({ participant_id: participantId, pending_registration_data: null })
                             .eq('id', txn.id);
-                        console.log('Registration created from pending data, participant:', newParticipant.id);
+                        console.log('Registration created/updated from pending data, participant:', participantId);
                     }
                 } else if (txn.participant_id) {
                     await supabase
@@ -379,27 +429,61 @@ router.post('/success', async (req, res) => {
                     // Create registration from pending data if no participant exists yet
                     if (!txn.participant_id && txn.pending_registration_data) {
                         const regData = txn.pending_registration_data;
-                        const { data: newParticipant } = await supabase
-                            .from('event_participants')
-                            .insert({
-                                event_id: txn.event_id,
-                                user_id: txn.user_id,
-                                form_data: regData.form_data,
-                                team_name: regData.team_name,
-                                team_members: regData.team_members || [],
-                                uploaded_files: regData.uploaded_files || [],
-                                status: 'pending',
-                                payment_status: 'completed'
-                            })
-                            .select('id')
-                            .single();
 
-                        if (newParticipant) {
+                        // Check if user already has a cancelled/rejected registration
+                        const { data: existingParticipant } = await supabase
+                            .from('event_participants')
+                            .select('id, status')
+                            .eq('event_id', txn.event_id)
+                            .eq('user_id', txn.user_id)
+                            .maybeSingle();
+
+                        let participantId = null;
+
+                        if (existingParticipant && ['cancelled', 'rejected'].includes(existingParticipant.status)) {
+                            const { data: updatedParticipant } = await supabase
+                                .from('event_participants')
+                                .update({
+                                    form_data: regData.form_data,
+                                    team_name: regData.team_name,
+                                    team_members: regData.team_members || [],
+                                    uploaded_files: regData.uploaded_files || [],
+                                    status: 'pending',
+                                    payment_status: 'completed',
+                                    reviewed_by: null,
+                                    reviewed_at: null,
+                                    rejection_reason: null,
+                                    submitted_at: new Date().toISOString(),
+                                    updated_at: new Date().toISOString()
+                                })
+                                .eq('id', existingParticipant.id)
+                                .select('id')
+                                .single();
+                            participantId = updatedParticipant?.id;
+                        } else if (!existingParticipant) {
+                            const { data: newParticipant } = await supabase
+                                .from('event_participants')
+                                .insert({
+                                    event_id: txn.event_id,
+                                    user_id: txn.user_id,
+                                    form_data: regData.form_data,
+                                    team_name: regData.team_name,
+                                    team_members: regData.team_members || [],
+                                    uploaded_files: regData.uploaded_files || [],
+                                    status: 'pending',
+                                    payment_status: 'completed'
+                                })
+                                .select('id')
+                                .single();
+                            participantId = newParticipant?.id;
+                        }
+
+                        if (participantId) {
                             await supabase
                                 .from('transactions')
-                                .update({ participant_id: newParticipant.id, pending_registration_data: null })
+                                .update({ participant_id: participantId, pending_registration_data: null })
                                 .eq('id', txn.id);
-                            console.log('Registration created via success redirect, participant:', newParticipant.id);
+                            console.log('Registration created/updated via success redirect, participant:', participantId);
                         }
                     } else if (txn.participant_id) {
                         await supabase
@@ -717,11 +801,15 @@ router.get('/user/:userId/transactions', async (req, res) => {
         }
 
         // Compute summary from transactions (the RPC doesn't include it for user view)
+        // total_spent = all payments made (completed, refunded, partially_refunded)
+        // total_refunded = money received back from refunds (any status except failed)
         const txns = data?.transactions || [];
+        const paidStatuses = ['completed', 'refunded', 'partially_refunded'];
+        const refundedStatuses = ['completed', 'processing', 'success', 'initiated'];
         const summary = {
-            total_spent: txns.filter(t => t.status === 'completed').reduce((sum, t) => sum + parseFloat(t.amount || 0), 0).toFixed(2),
-            total_refunded: txns.filter(t => t.refund).reduce((sum, t) => sum + parseFloat(t.refund?.refund_amount || 0), 0).toFixed(2),
-            completed_count: txns.filter(t => t.status === 'completed').length,
+            total_spent: txns.filter(t => paidStatuses.includes(t.status)).reduce((sum, t) => sum + parseFloat(t.amount || 0), 0).toFixed(2),
+            total_refunded: txns.filter(t => t.refund && refundedStatuses.includes(t.refund.status)).reduce((sum, t) => sum + parseFloat(t.refund?.refund_amount || 0), 0).toFixed(2),
+            completed_count: txns.filter(t => paidStatuses.includes(t.status)).length,
             total_transactions: txns.length
         };
 

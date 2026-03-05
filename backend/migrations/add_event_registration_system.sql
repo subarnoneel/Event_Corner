@@ -214,7 +214,7 @@ AS $$
 DECLARE
     v_config RECORD;
     v_participant_id UUID;
-    v_existing_registration UUID;
+    v_existing_registration RECORD;
 BEGIN
     -- Check if registration config exists and is open
     SELECT * INTO v_config FROM event_registration_configs 
@@ -244,15 +244,39 @@ BEGIN
     END IF;
     
     -- Check if user already registered
-    SELECT id INTO v_existing_registration 
+    SELECT id, status INTO v_existing_registration 
     FROM event_participants 
     WHERE event_id = p_event_id AND user_id = p_user_id;
     
     IF v_existing_registration IS NOT NULL THEN
-        RETURN jsonb_build_object(
-            'success', false,
-            'error', 'You have already registered for this event'
-        );
+        -- If previous registration was rejected or cancelled, allow re-registration
+        IF v_existing_registration.status IN ('rejected', 'cancelled') THEN
+            UPDATE event_participants
+            SET 
+                form_data = p_form_data,
+                team_name = p_team_name,
+                team_members = p_team_members,
+                uploaded_files = p_uploaded_files,
+                status = 'pending',
+                reviewed_by = NULL,
+                reviewed_at = NULL,
+                rejection_reason = NULL,
+                submitted_at = NOW(),
+                updated_at = NOW()
+            WHERE id = v_existing_registration.id
+            RETURNING id INTO v_participant_id;
+            
+            RETURN jsonb_build_object(
+                'success', true,
+                'participant_id', v_participant_id,
+                'message', 'Registration re-submitted successfully. Pending approval.'
+            );
+        ELSE
+            RETURN jsonb_build_object(
+                'success', false,
+                'error', 'You have already registered for this event'
+            );
+        END IF;
     END IF;
     
     -- Insert registration

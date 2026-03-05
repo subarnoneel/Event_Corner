@@ -624,8 +624,8 @@ const EventRegistrationForm = () => {
     );
   }
 
-  // Check if user already registered (but allow re-registration if rejected)
-  if (registrationStatus?.is_registered && registrationStatus.registration_status !== 'rejected') {
+  // Check if user already registered (but allow re-registration if rejected or cancelled)
+  if (registrationStatus?.is_registered && !['rejected', 'cancelled'].includes(registrationStatus.registration_status)) {
     return (
       <div className="min-h-screen bg-gray-50 py-12 px-4">
         <Toaster position="top-right" />

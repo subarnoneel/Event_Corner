@@ -280,12 +280,13 @@ BEGIN
     ) sub;
     
     -- Summary
+    -- total_revenue includes completed + partially_refunded + refunded (all were paid at some point)
     SELECT jsonb_build_object(
-        'total_revenue', COALESCE(SUM(CASE WHEN status = 'completed' THEN amount ELSE 0 END), 0),
+        'total_revenue', COALESCE(SUM(CASE WHEN status IN ('completed', 'partially_refunded', 'refunded') THEN amount ELSE 0 END), 0),
         'total_refunded', COALESCE((
             SELECT SUM(r.refund_amount) FROM refunds r
             JOIN transactions t2 ON r.transaction_id = t2.id
-            WHERE t2.event_id = p_event_id AND r.status = 'completed'
+            WHERE t2.event_id = p_event_id AND r.status IN ('completed', 'processing', 'success', 'initiated')
         ), 0),
         'total_transactions', COUNT(*),
         'completed_count', COUNT(*) FILTER (WHERE status = 'completed'),

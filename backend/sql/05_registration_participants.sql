@@ -247,8 +247,8 @@ BEGIN
     WHERE event_id = p_event_id AND user_id = p_user_id;
     
     IF v_existing_registration IS NOT NULL THEN
-        -- If previous registration was rejected, allow re-registration by updating the existing record
-        IF v_existing_registration.status = 'rejected' THEN
+        -- If previous registration was rejected or cancelled, allow re-registration by updating the existing record
+        IF v_existing_registration.status IN ('rejected', 'cancelled') THEN
             UPDATE event_participants
             SET 
                 form_data = p_form_data,
