@@ -1500,11 +1500,6 @@ app.post('/api/admin/institutions/:institutionId/approve', async (req, res) => {
       });
     }
 
-    // TODO: Send approval email to institution
-    // You can integrate email service here (e.g., SendGrid, Nodemailer)
-    // Example:
-    // await sendApprovalEmail(data.institution_email, data.institution_name);
-
     res.json(data);
   } catch (err) {
     console.error('Unexpected error approving institution:', err);
@@ -1552,11 +1547,6 @@ app.post('/api/admin/institutions/:institutionId/reject', async (req, res) => {
         error: error.message || 'Failed to reject institution'
       });
     }
-
-    // TODO: Send rejection email to institution
-    // You can integrate email service here (e.g., SendGrid, Nodemailer)
-    // Example:
-    // await sendRejectionEmail(data.institution_email, data.institution_name, rejection_reason);
 
     res.json(data);
   } catch (err) {

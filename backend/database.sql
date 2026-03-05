@@ -1,165 +1,236 @@
-CREATE TABLE roles (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    role_name VARCHAR(50) UNIQUE NOT NULL,
-    display_name VARCHAR(100) NOT NULL,
-    description TEXT,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+CREATE TABLE public.crawler_sources (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  url text NOT NULL UNIQUE,
+  name character varying,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT crawler_sources_pkey PRIMARY KEY (id),
+  CONSTRAINT crawler_sources_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id)
 );
-
-CREATE INDEX idx_roles_name ON roles(role_name);
-CREATE INDEX idx_roles_active ON roles(is_active);
-
--- Seed initial roles
-INSERT INTO roles (role_name, display_name, description) VALUES
-('super_admin', 'Super Administrator', 'Full system access - can create admins and manage everything'),
-('admin', 'Administrator', 'User verification, event management, and content moderation'),
-('institution', 'Institution', 'Create events, manage organizers under institution'),
-('organizer', 'Event Organizer', 'Create and manage individual events'),
-('participant', 'Participant', 'Attend events, bookmark, register for events');
-
-
--- ============================================================================
--- USERS TABLE (Base user information)
--- ============================================================================
-
-CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    firebase_uid VARCHAR(128) UNIQUE NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    username VARCHAR(100) UNIQUE NOT NULL,
-    full_name VARCHAR(255) NOT NULL,
-    profile_picture_url TEXT DEFAULT 'https://res.cloudinary.com/dfvwazcdk/image/upload/v1753161431/generalProfilePicture_inxppe.png',
-    banner_url TEXT DEFAULT 'https://res.cloudinary.com/dfvwazcdk/image/upload/v1753513555/banner_z0sar4.png',
-    
-    -- Institution-specific fields (nullable)
-    additional_info JSONB,
-    institution_type VARCHAR(50), -- 'school_college_madrasa' or 'university'
-    eiin_number VARCHAR(6), -- 6-digit EIIN for schools/colleges/madrasas
-    verification_documents TEXT[], -- Array of document file paths
-    verification_status VARCHAR(20) DEFAULT 'pending', -- 'pending', 'approved', 'rejected'
-    rejection_reason TEXT, -- Reason for rejection
-    verified_at TIMESTAMP WITH TIME ZONE,
-    verified_by UUID REFERENCES users(id) ON DELETE SET NULL, -- Admin who verified
-    
-    -- Organizer-specific fields (nullable)
-    institution_id UUID REFERENCES users(id) ON DELETE SET NULL, -- Reference to parent institution
-    
-    -- Participant-specific fields (nullable)
-    institution VARCHAR(255),
-    id_document_urls TEXT[],
-    
-    is_verified BOOLEAN DEFAULT FALSE,
-    is_active BOOLEAN DEFAULT TRUE, 
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+CREATE TABLE public.event_approval_history (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  event_id uuid NOT NULL,
+  contact_email character varying NOT NULL,
+  action character varying NOT NULL CHECK (action::text = ANY (ARRAY['approved'::character varying, 'rejected'::character varying]::text[])),
+  ip_address character varying,
+  user_agent text,
+  responded_at timestamp with time zone DEFAULT now(),
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT event_approval_history_pkey PRIMARY KEY (id),
+  CONSTRAINT event_approval_history_event_id_fkey FOREIGN KEY (event_id) REFERENCES public.events(id)
 );
-
-CREATE INDEX idx_users_firebase_uid ON users(firebase_uid);
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_username ON users(username);
-CREATE INDEX idx_users_active ON users(is_active);
-CREATE INDEX idx_users_institution ON users(institution);
-CREATE INDEX idx_users_institution_id ON users(institution_id);
-
-
--- ============================================================================
--- USER ROLES JUNCTION TABLE (Many-to-Many: Users can have multiple roles)
--- ============================================================================
-
-CREATE TABLE user_roles (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
-    assigned_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    assigned_by UUID REFERENCES users(id) ON DELETE SET NULL, -- Who assigned this role
-    
-    UNIQUE(user_id, role_id) -- Prevent duplicate role assignments
+CREATE TABLE public.event_bookmarks (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  event_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  bookmarked_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT event_bookmarks_pkey PRIMARY KEY (id),
+  CONSTRAINT event_bookmarks_event_id_fkey FOREIGN KEY (event_id) REFERENCES public.events(id),
+  CONSTRAINT event_bookmarks_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
-
-CREATE INDEX idx_user_roles_user ON user_roles(user_id);
-CREATE INDEX idx_user_roles_role ON user_roles(role_id);
-CREATE INDEX idx_user_roles_combined ON user_roles(user_id, role_id);
-
-
--- ============================================================================
--- NOTE: Role-specific attributes are now stored directly in users table
--- institutions, organizers, and participants tables have been consolidated
--- ============================================================================
-
-
--- ============================================================================
--- STORED PROCEDURES AND FUNCTIONS
--- ============================================================================
-
--- ============================================================================
--- PROCEDURE: register_user
--- Purpose: Atomically create a new user and assign a role
--- Parameters:
---   p_firebase_uid: Firebase UID from Firebase Auth
---   p_email: User email
---   p_username: Unique username
---   p_full_name: Full name
---   p_role: Role name ('participant', 'organizer', 'institution')
---   p_institution: Institution name (for participants, optional)
---   p_institution_id: Institution ID (for organizers, optional)
--- Returns: JSON with user_id, email, username, role, and success status
--- ============================================================================
-
-// GET EVENT DETAILS BY ID
-app.get("/api/events/:id", async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const { data, error } = await supabase
-      .from("events")
-      .select(`
-        id,
-        title,
-        description,
-        category,
-        tags,
-        additional_info,
-        view_count,
-        created_at,
-        updated_at
-      `)
-      .eq("id", id)
-      .single();
-
-    if (error || !data) {
-      return res.status(404).json({
-        success: false,
-        message: "Event not found"
-      });
-    }
-
-    res.json({
-      success: true,
-      event: data
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error"
-    });
-  }
-});
-
--- ============================================================================
--- CRAWLER SOURCES TABLE
--- Stores URLs for bulk crawling
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS crawler_sources (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    url TEXT UNIQUE NOT NULL,
-    name VARCHAR(100), -- Optional name (e.g., "Codeforces")
-    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+CREATE TABLE public.event_participants (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  event_id uuid NOT NULL,
+  user_id uuid,
+  form_data jsonb NOT NULL DEFAULT '{}'::jsonb,
+  team_name character varying,
+  team_members jsonb DEFAULT '[]'::jsonb,
+  uploaded_files text[] DEFAULT '{}',
+  status character varying NOT NULL DEFAULT 'pending'::character varying CHECK (status::text = ANY (ARRAY['pending'::character varying, 'approved'::character varying, 'rejected'::character varying, 'cancelled'::character varying]::text[])),
+  reviewed_by uuid,
+  reviewed_at timestamp with time zone,
+  rejection_reason text,
+  submitted_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  payment_status character varying DEFAULT 'not_required'::character varying CHECK (payment_status::text = ANY (ARRAY['not_required'::character varying, 'pending'::character varying, 'completed'::character varying, 'refunded'::character varying]::text[])),
+  CONSTRAINT event_participants_pkey PRIMARY KEY (id),
+  CONSTRAINT event_participants_event_id_fkey FOREIGN KEY (event_id) REFERENCES public.events(id),
+  CONSTRAINT event_participants_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT event_participants_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES public.users(id)
 );
-
-CREATE INDEX idx_crawler_sources_created_by ON crawler_sources(created_by);
-
+CREATE TABLE public.event_registration_configs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  event_id uuid NOT NULL UNIQUE,
+  registration_type character varying NOT NULL DEFAULT 'internal'::character varying CHECK (registration_type::text = ANY (ARRAY['internal'::character varying, 'external'::character varying]::text[])),
+  template_type character varying DEFAULT 'individual'::character varying CHECK (template_type::text = ANY (ARRAY['individual'::character varying, 'team'::character varying]::text[])),
+  team_min_size integer DEFAULT 1,
+  team_max_size integer DEFAULT 5,
+  form_config jsonb NOT NULL DEFAULT '{"fields": [], "settings": {}}'::jsonb,
+  registration_deadline timestamp with time zone,
+  is_active boolean DEFAULT true,
+  is_registration_open boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  external_registration_url text,
+  CONSTRAINT event_registration_configs_pkey PRIMARY KEY (id),
+  CONSTRAINT event_registration_configs_event_id_fkey FOREIGN KEY (event_id) REFERENCES public.events(id)
+);
+CREATE TABLE public.event_registrations (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  event_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  registration_status character varying DEFAULT 'pending'::character varying CHECK (registration_status::text = ANY (ARRAY['registered'::character varying, 'pending'::character varying, 'rejected'::character varying]::text[])),
+  registration_data jsonb,
+  checked_in boolean DEFAULT false,
+  check_in_time timestamp with time zone,
+  registered_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT event_registrations_pkey PRIMARY KEY (id),
+  CONSTRAINT event_registrations_event_id_fkey FOREIGN KEY (event_id) REFERENCES public.events(id),
+  CONSTRAINT event_registrations_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.event_timeslots (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  event_id uuid NOT NULL,
+  title character varying NOT NULL,
+  description text,
+  start_time timestamp with time zone NOT NULL,
+  end_time timestamp with time zone NOT NULL,
+  color character varying DEFAULT '#3b82f6'::character varying,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT event_timeslots_pkey PRIMARY KEY (id),
+  CONSTRAINT event_timeslots_event_id_fkey FOREIGN KEY (event_id) REFERENCES public.events(id)
+);
+CREATE TABLE public.events (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  title character varying NOT NULL,
+  description text,
+  category character varying NOT NULL,
+  tags text[],
+  banner_url text,
+  thumbnail_url text,
+  image_urls text[],
+  venue_type character varying NOT NULL CHECK (venue_type::text = ANY (ARRAY['physical'::character varying, 'online'::character varying, 'hybrid'::character varying]::text[])),
+  venue_name character varying,
+  event_timezone character varying DEFAULT 'Asia/Dhaka'::character varying,
+  venue_address text,
+  venue_lat numeric,
+  venue_lng numeric,
+  google_place_id character varying,
+  venue_city character varying,
+  venue_state character varying,
+  venue_country character varying,
+  created_by uuid NOT NULL,
+  institution_id uuid,
+  status character varying DEFAULT 'active'::character varying,
+  visibility character varying DEFAULT 'public'::character varying,
+  is_featured boolean DEFAULT false,
+  contact_email character varying,
+  contact_phone character varying,
+  website_url text,
+  requirements text,
+  additional_info jsonb,
+  view_count integer DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  approval_status character varying DEFAULT 'approved'::character varying CHECK (approval_status::text = ANY (ARRAY['pending_approval'::character varying, 'approved'::character varying, 'rejected'::character varying]::text[])),
+  approval_token uuid,
+  approval_token_expires_at timestamp with time zone,
+  approval_requested_at timestamp with time zone,
+  approval_responded_at timestamp with time zone,
+  requires_approval boolean DEFAULT false,
+  CONSTRAINT events_pkey PRIMARY KEY (id),
+  CONSTRAINT events_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id),
+  CONSTRAINT events_institution_id_fkey FOREIGN KEY (institution_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.payment_configs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  event_id uuid NOT NULL UNIQUE,
+  is_paid_event boolean DEFAULT false,
+  fee_amount numeric DEFAULT 0.00,
+  fee_type character varying DEFAULT 'per_person'::character varying CHECK (fee_type::text = ANY (ARRAY['per_person'::character varying, 'per_team'::character varying]::text[])),
+  currency character varying DEFAULT 'BDT'::character varying,
+  refund_policy character varying DEFAULT 'full_refund'::character varying CHECK (refund_policy::text = ANY (ARRAY['full_refund'::character varying, 'partial_refund'::character varying, 'no_refund'::character varying, 'custom'::character varying]::text[])),
+  refund_percentage integer DEFAULT 100 CHECK (refund_percentage >= 0 AND refund_percentage <= 100),
+  accepted_methods jsonb DEFAULT '["bkash", "nagad", "card", "bank"]'::jsonb,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT payment_configs_pkey PRIMARY KEY (id),
+  CONSTRAINT payment_configs_event_id_fkey FOREIGN KEY (event_id) REFERENCES public.events(id)
+);
+CREATE TABLE public.refunds (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  transaction_id uuid NOT NULL,
+  refund_amount numeric NOT NULL,
+  reason character varying NOT NULL CHECK (reason::text = ANY (ARRAY['registration_rejected'::character varying, 'event_cancelled'::character varying, 'participant_cancelled'::character varying, 'manual'::character varying]::text[])),
+  reason_detail text,
+  status character varying NOT NULL DEFAULT 'initiated'::character varying CHECK (status::text = ANY (ARRAY['initiated'::character varying, 'processing'::character varying, 'completed'::character varying, 'failed'::character varying]::text[])),
+  gateway_refund_id character varying,
+  gateway_response jsonb DEFAULT '{}'::jsonb,
+  initiated_by uuid,
+  initiated_at timestamp with time zone DEFAULT now(),
+  completed_at timestamp with time zone,
+  CONSTRAINT refunds_pkey PRIMARY KEY (id),
+  CONSTRAINT refunds_transaction_id_fkey FOREIGN KEY (transaction_id) REFERENCES public.transactions(id),
+  CONSTRAINT refunds_initiated_by_fkey FOREIGN KEY (initiated_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.roles (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  role_name character varying NOT NULL UNIQUE,
+  display_name character varying NOT NULL,
+  description text,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT roles_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.transactions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  event_id uuid NOT NULL,
+  participant_id uuid,
+  user_id uuid,
+  amount numeric NOT NULL,
+  currency character varying DEFAULT 'BDT'::character varying,
+  payment_method character varying,
+  tran_id character varying NOT NULL UNIQUE,
+  gateway_transaction_id character varying,
+  bank_tran_id character varying,
+  status character varying NOT NULL DEFAULT 'initiated'::character varying CHECK (status::text = ANY (ARRAY['initiated'::character varying, 'completed'::character varying, 'failed'::character varying, 'cancelled'::character varying, 'refunded'::character varying, 'partially_refunded'::character varying]::text[])),
+  gateway_response jsonb DEFAULT '{}'::jsonb,
+  initiated_at timestamp with time zone DEFAULT now(),
+  completed_at timestamp with time zone,
+  pending_registration_data jsonb,
+  CONSTRAINT transactions_pkey PRIMARY KEY (id),
+  CONSTRAINT transactions_event_id_fkey FOREIGN KEY (event_id) REFERENCES public.events(id),
+  CONSTRAINT transactions_participant_id_fkey FOREIGN KEY (participant_id) REFERENCES public.event_participants(id),
+  CONSTRAINT transactions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.user_roles (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  role_id uuid NOT NULL,
+  assigned_at timestamp with time zone DEFAULT now(),
+  assigned_by uuid,
+  CONSTRAINT user_roles_pkey PRIMARY KEY (id),
+  CONSTRAINT user_roles_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT user_roles_role_id_fkey FOREIGN KEY (role_id) REFERENCES public.roles(id),
+  CONSTRAINT user_roles_assigned_by_fkey FOREIGN KEY (assigned_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.users (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  firebase_uid character varying NOT NULL UNIQUE,
+  email character varying NOT NULL UNIQUE,
+  username character varying NOT NULL UNIQUE,
+  full_name character varying NOT NULL,
+  profile_picture_url text DEFAULT 'https://res.cloudinary.com/dfvwazcdk/image/upload/v1753161431/generalProfilePicture_inxppe.png'::text,
+  banner_url text DEFAULT 'https://res.cloudinary.com/dfvwazcdk/image/upload/v1753513555/banner_z0sar4.png'::text,
+  additional_info jsonb,
+  institution_id uuid,
+  institution character varying,
+  id_document_urls text[],
+  is_verified boolean DEFAULT false,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  institution_type character varying,
+  eiin_number character varying,
+  verification_documents text[],
+  verification_status character varying DEFAULT 'pending'::character varying,
+  rejection_reason text,
+  verified_at timestamp with time zone,
+  verified_by uuid,
+  CONSTRAINT users_pkey PRIMARY KEY (id),
+  CONSTRAINT users_institution_id_fkey FOREIGN KEY (institution_id) REFERENCES public.users(id),
+  CONSTRAINT users_verified_by_fkey FOREIGN KEY (verified_by) REFERENCES public.users(id)
+);
