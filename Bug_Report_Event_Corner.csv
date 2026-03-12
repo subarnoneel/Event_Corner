@@ -1,0 +1,47 @@
+Bug ID,Bug Summary,Module/Feature,Severity,Priority,Status,Assigned To,Reported By,Bug Reporting Date,Fix Date
+C-1,Firebase API Keys Exposed in Source Code,Authentication,Critical,High,Fixed,Nakib 220,B Mahin 254,12/9/2025,12/12/2025
+C-2,Open CORS Policy Allows Any Origin,API Security,Critical,High,Fixed,Fattah 204,Neel 206,12/10/2025,12/14/2025
+C-3,SQL Injection Risk in Institution Search,Institution Management,Critical,High,Fixed,Multazam 212,Nakib 220,12/11/2025,12/15/2025
+C-4,Path Traversal in Document Serving Endpoint,Document Management,Critical,High,Fixed,Neel 206,M Mahin 238,12/13/2025,12/17/2025
+C-5,Unauthenticated File Upload Endpoint,Document Upload,Critical,High,Fixed,B Mahin 254,Fattah 204,12/14/2025,12/18/2025
+C-6,Unauthenticated Document Access,Document Access Control,Critical,High,Fixed,M Mahin 238,Multazam 212,12/16/2025,12/20/2025
+C-7,Race Condition in Registration Cancellation,Refunds,Critical,High,Fixed,Nakib 220,Neel 206,12/18/2025,12/22/2025
+C-8,Race Condition in Event Cancellation,Event Management,Critical,High,Fixed,Fattah 204,Nakib 220,12/20/2025,12/24/2025
+C-9,Rate Limiting Skips Login Endpoint,Security,Critical,High,Fixed,Multazam 212,B Mahin 254,12/21/2025,12/26/2025
+C-10,No Input Validation on Registration,Event Registration,Critical,High,Fixed,Neel 206,Fattah 204,12/23/2025,12/28/2025
+C-11,JWT Token Decoded Without Verification,Authentication,Critical,High,Fixed,M Mahin 238,Multazam 212,12/24/2025,12/29/2025
+H-1,Unhandled Promise Rejection Email,Event Creation,High,High,Fixed,B Mahin 254,Nakib 220,12/26/2025,12/31/2025
+H-2,useEffect Cleanup Conditional,Navigation,High,High,Fixed,Nakib 220,Neel 206,12/28/2025,1/2/2026
+H-3,useEffect Timeout Cleanup Missing,Institution Search,High,High,Fixed,Multazam 212,Fattah 204,12/30/2025,1/4/2026
+H-4,Missing Try Catch in ChatBot,AI Chat,High,High,Fixed,Neel 206,B Mahin 254,1/1/2026,1/6/2026
+H-5,Missing Error Handling in ExploreEvents,Event Listing,High,High,Fixed,M Mahin 238,Multazam 212,1/3/2026,1/8/2026
+H-6,Hardcoded Localhost URLs in AI Routes,AI Integration,High,High,Fixed,Fattah 204,Nakib 220,1/5/2026,1/10/2026
+H-7,Sensitive Data Logged in AI Chat,AI Chat,High,High,Fixed,B Mahin 254,Neel 206,1/7/2026,1/12/2026
+H-8,Silent Email Failure on Approval,Notifications,High,High,Fixed,Nakib 220,Fattah 204,1/9/2026,1/14/2026
+H-9,XSS in Bulk Email Message,Email Service,High,High,Fixed,Multazam 212,M Mahin 238,1/11/2026,1/16/2026
+H-10,Refund Amount NaN Risk,Payment Processing,High,High,Fixed,Neel 206,B Mahin 254,1/13/2026,1/18/2026
+H-11,CSV Export Formula Injection,CSV Export,High,High,Fixed,M Mahin 238,Nakib 220,1/15/2026,1/20/2026
+H-12,Missing JWT Expiration Check,Authentication,High,Medium,Fixed,Fattah 204,Multazam 212,1/17/2026,1/22/2026
+H-13,No Validation on Team Member Array,Team Registration,High,Medium,Fixed,B Mahin 254,Neel 206,1/19/2026,1/24/2026
+H-14,Email Error Message Disclosure,Email Service,High,Medium,Fixed,Nakib 220,M Mahin 238,1/21/2026,1/26/2026
+H-15,Bookmark User ID Not Verified,Bookmarks System,High,Medium,Fixed,Multazam 212,B Mahin 254,1/23/2026,1/28/2026
+M-1,No Password Strength Validation,User Registration,Medium,Medium,Fixed,Neel 206,Nakib 220,1/25/2026,1/30/2026
+M-2,File Type Bypass via Extension,Document Upload,Medium,Medium,Fixed,M Mahin 238,Fattah 204,1/27/2026,2/1/2026
+M-3,SVG XSS Vector via Image Upload,Image Upload,Medium,Medium,Fixed,Fattah 204,Multazam 212,1/29/2026,2/3/2026
+M-4,Multiple Carousel Timers,Homepage,Medium,Medium,Fixed,B Mahin 254,Nakib 220,1/31/2026,2/5/2026
+M-5,Infinite Spinner CancelEventModal,Event UI,Medium,Medium,Fixed,Nakib 220,Neel 206,2/2/2026,2/7/2026
+M-6,N+1 Query OrganizerPaymentDashboard,Payment Dashboard,Medium,Medium,Fixed,Multazam 212,Fattah 204,2/4/2026,2/9/2026
+M-7,N+1 API Calls InstitutionDashboard,Payment Analytics,Medium,Medium,Fixed,Neel 206,M Mahin 238,2/6/2026,2/11/2026
+M-8,Sensitive Payment Data Logged,Payment Logs,Medium,Medium,Fixed,M Mahin 238,B Mahin 254,2/8/2026,2/13/2026
+M-9,SSRF Vulnerability in Crawler,Web Crawler,Medium,Medium,Fixed,Fattah 204,Nakib 220,2/10/2026,2/15/2026
+M-10,Protocol Validation Missing,Crawler Security,Medium,Medium,Fixed,B Mahin 254,Multazam 212,2/12/2026,2/17/2026
+M-11,Missing Payment Amount Validation,Payment Initiation,Medium,Medium,Fixed,Nakib 220,Neel 206,2/14/2026,2/19/2026
+M-12,Race Condition Payment Creation,Payment Processing,Medium,Medium,Fixed,Multazam 212,B Mahin 254,2/16/2026,2/21/2026
+M-13,No Idempotency Token Payment,Payment Initiation,Medium,Medium,Fixed,Neel 206,Fattah 204,2/18/2026,2/23/2026
+M-14,Silent Date Fallback in Crawler,Event Crawler,Medium,Low,Fixed,M Mahin 238,Nakib 220,2/20/2026,2/24/2026
+L-1,API Base URL Logged in Console,Frontend Config,Low,Low,Fixed,Fattah 204,Multazam 212,2/22/2026,2/25/2026
+L-2,No minLength Attribute Password,Registration Form,Low,Low,Fixed,B Mahin 254,Neel 206,2/23/2026,2/26/2026
+L-3,File Selection UX Issue,Document Upload,Low,Low,Fixed,Nakib 220,Fattah 204,2/24/2026,2/27/2026
+L-4,No Image Dimension Validation,Image Upload,Low,Low,Fixed,Multazam 212,M Mahin 238,2/25/2026,2/28/2026
+L-5,FileReader onError Not Handled,Image Upload,Low,Low,Fixed,Neel 206,B Mahin 254,2/26/2026,3/1/2026
+L-6,setState on Unmounted Modal,Event Modal,Low,Low,Fixed,M Mahin 238,Nakib 220,2/27/2026,3/1/2026
