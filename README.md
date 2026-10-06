@@ -456,8 +456,6 @@ Built as a team project for the RDBMS Lab course at the **Islamic University of 
 | Nakib Saleh | [@Nakib-Saleh](https://github.com/Nakib-Saleh) |
 | Multazam Mahmud | [@MultazamMahmud12](https://github.com/MultazamMahmud12) |
 | M. Mahin | [@darkrai06](https://github.com/darkrai06) |
-| B. Mahin | — |
-| Fattah | — |
 
 ---
 
