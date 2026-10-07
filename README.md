@@ -461,34 +461,6 @@ Built as a team project for the RDBMS Lab course at the **Islamic University of 
 
 ---
 
-## Course & Repository Context
-
-Event Corner was developed by our team across two fifth-semester courses
-at Islamic University of Technology:
-
-- **CSE 4508 — RDBMS Programming Lab**
-- **CSE 4510 — Software Development**
-
-This repository preserves the RDBMS-focused variant, with emphasis on
-PostgreSQL schema design, PL/pgSQL stored functions, migrations and
-database-backed application workflows.
-
-The extended Software Development version maintained by the team is:
-https://github.com/Nakib-Saleh/Event_Corner
-
-## My Contributions
-
-My contributions included:
-
-- Implementing the participant event-registration workflow
-- Developing the organizer-facing custom registration-form builder
-- Contributing PostgreSQL/PL/pgSQL logic supporting registration workflows
-- Implementing institution-registration verification and admin approval flows
-- Improving event-card UX and institution search
-- Contributing to project documentation and repository preparation
-
----
-
 <div align="center">
 
 <sub>This repository is preserved as it was submitted for the course. It is an academic project and has not been deployed to production.</sub>
