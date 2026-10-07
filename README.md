@@ -16,7 +16,9 @@
 ![Firebase](https://img.shields.io/badge/Firebase_Auth-FFCA28?style=flat&logo=firebase&logoColor=black)
 ![Python](https://img.shields.io/badge/FastAPI-009688?style=flat&logo=fastapi&logoColor=white)
 
-*Course project, RDBMS Lab (6th semester), Islamic University of Technology (IUT)*
+*Team project developed across CSE 4508 — RDBMS Programming Lab and
+CSE 4510 — Software Development, 5th Semester,
+Islamic University of Technology (IUT).*
 
 </div>
 
@@ -456,6 +458,34 @@ Built as a team project for the RDBMS Lab course at the **Islamic University of 
 | Nakib Saleh | [@Nakib-Saleh](https://github.com/Nakib-Saleh) |
 | Multazam Mahmud | [@MultazamMahmud12](https://github.com/MultazamMahmud12) |
 | M. Mahin | [@darkrai06](https://github.com/darkrai06) |
+
+---
+
+## Course & Repository Context
+
+Event Corner was developed by our team across two fifth-semester courses
+at Islamic University of Technology:
+
+- **CSE 4508 — RDBMS Programming Lab**
+- **CSE 4510 — Software Development**
+
+This repository preserves the RDBMS-focused variant, with emphasis on
+PostgreSQL schema design, PL/pgSQL stored functions, migrations and
+database-backed application workflows.
+
+The extended Software Development version maintained by the team is:
+https://github.com/Nakib-Saleh/Event_Corner
+
+## My Contributions
+
+My contributions included:
+
+- Implementing the participant event-registration workflow
+- Developing the organizer-facing custom registration-form builder
+- Contributing PostgreSQL/PL/pgSQL logic supporting registration workflows
+- Implementing institution-registration verification and admin approval flows
+- Improving event-card UX and institution search
+- Contributing to project documentation and repository preparation
 
 ---
 
